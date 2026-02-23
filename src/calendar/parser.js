@@ -14,10 +14,11 @@
  */
 
 import ical from 'node-ical';
+import { formatEventTime, formatEventRange } from '../utils/timezone.js';
 
 /**
  * @typedef {{ tz?: string } & Date} DateWithTz
- * @typedef {{ uid: string, title: string, start: Date, end: Date, startTz?: string, endTz?: string }} CalendarEvent
+ * @typedef {{ uid: string, title: string, start: Date, end: Date, startTz?: string, endTz?: string, displayStart: string, displayEnd: string, displayRange: string }} CalendarEvent
  */
 
 // ---------------------------------------------------------------------------
@@ -155,13 +156,22 @@ export function parseEvents(calendarData, options = {}) {
 
     // 7. Build CalendarEvent objects for each instance
     for (const instance of instances) {
+      const eventStart = instance.start ?? event.start;
+      const eventEnd   = instance.end   ?? event.end;
+      // Preserve .tz from the original event for formatting
+      if (event.start?.tz && eventStart && !eventStart.tz) eventStart.tz = event.start.tz;
+      if (event.end?.tz   && eventEnd   && !eventEnd.tz)   eventEnd.tz   = event.end.tz;
+
       results.push({
-        uid:     event.uid,
-        title:   getTitle(event.summary),
-        start:   instance.start ?? event.start,
-        end:     instance.end   ?? event.end,
-        startTz: event.start?.tz,
-        endTz:   event.end?.tz,
+        uid:          event.uid,
+        title:        getTitle(event.summary),
+        start:        eventStart,
+        end:          eventEnd,
+        startTz:      event.start?.tz,
+        endTz:        event.end?.tz,
+        displayStart: formatEventTime(eventStart),
+        displayEnd:   formatEventTime(eventEnd),
+        displayRange: formatEventRange(eventStart, eventEnd),
       });
     }
   }

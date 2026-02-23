@@ -13,7 +13,7 @@ import { hasEventsChanged } from './cache.js';
 import { loadConfig } from '../config/manager.js';
 
 /**
- * @typedef {{ uid: string, title: string, start: Date, end: Date, startTz?: string, endTz?: string }} CalendarEvent
+ * @typedef {{ uid: string, title: string, start: Date, end: Date, startTz?: string, endTz?: string, displayStart: string, displayEnd: string, displayRange: string }} CalendarEvent
  */
 
 /**
@@ -55,3 +55,4 @@ export async function getTodaysMeetings() {
 export { fetchCalendar } from './fetcher.js';
 export { parseEvents } from './parser.js';
 export { hasEventsChanged } from './cache.js';
+export { formatEventTime, formatEventRange } from '../utils/timezone.js';
