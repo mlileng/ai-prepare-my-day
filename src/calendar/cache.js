@@ -16,6 +16,23 @@ import { CONFIG_DIR } from '../credentials/constants.js';
 const CACHE_FILE = path.join(CONFIG_DIR, 'calendar-cache.json');
 
 /**
+ * Compute a stable content hash for a single CalendarEvent.
+ * Extracts only stable fields (uid, title, start, end) for deterministic output.
+ *
+ * @param {{uid: string, title: string, start: Date, end: Date}} event
+ * @returns {string} MD5 hex digest
+ */
+export function hashSingleEvent(event) {
+  const stable = {
+    uid: event.uid,
+    title: event.title,
+    start: event.start.toISOString(),
+    end: event.end.toISOString(),
+  };
+  return crypto.createHash('md5').update(JSON.stringify(stable)).digest('hex');
+}
+
+/**
  * Compute a stable content hash for a list of CalendarEvents.
  * Extracts only stable fields (uid, title, start, end) and sorts by uid
  * to ensure deterministic output regardless of array order.
@@ -38,27 +55,35 @@ export function hashEvents(events) {
 /**
  * Load the cache from disk.
  *
- * @returns {Promise<{date: string|null, hash: string|null}>}
+ * Ensures meetingMap always exists even in old cache format that pre-dates
+ * the meetingMap field (backward-compatible via nullish coalescing).
+ *
+ * @returns {Promise<{date: string|null, hash: string|null, meetingMap: object}>}
  */
 export async function loadCache() {
   try {
     const content = await fs.readFile(CACHE_FILE, 'utf-8');
-    return JSON.parse(content);
+    const parsed = JSON.parse(content);
+    return { ...parsed, meetingMap: parsed.meetingMap ?? {} };
   } catch {
-    return { date: null, hash: null };
+    return { date: null, hash: null, meetingMap: {} };
   }
 }
 
 /**
  * Persist the cache to disk.
  *
+ * Accepts an optional meetingMap (eventHash -> notionPageId) that is written
+ * alongside the date and event hash for idempotent re-run support.
+ *
  * @param {string} date - YYYY-MM-DD date string
  * @param {string} hash - MD5 hex digest of events
+ * @param {object} [meetingMap={}] - Map of eventHash -> notionPageId
  * @returns {Promise<void>}
  */
-export async function saveCache(date, hash) {
+export async function saveCache(date, hash, meetingMap = {}) {
   await fs.mkdir(CONFIG_DIR, { recursive: true });
-  await fs.writeFile(CACHE_FILE, JSON.stringify({ date, hash }), 'utf-8');
+  await fs.writeFile(CACHE_FILE, JSON.stringify({ date, hash, meetingMap }), 'utf-8');
 }
 
 /**
@@ -77,6 +102,7 @@ export async function hasEventsChanged(events) {
     return false;
   }
 
-  await saveCache(todayStr, currentHash);
+  // Preserve existing meetingMap across cache updates within the same day
+  await saveCache(todayStr, currentHash, cache.meetingMap ?? {});
   return true;
 }
