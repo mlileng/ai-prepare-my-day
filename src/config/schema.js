@@ -5,7 +5,8 @@
 export const DEFAULT_CONFIG = {
   meetingsDatabaseId: null,
   daysDatabaseId: null,
-  icsUrl: null
+  icsUrl: null,
+  userEmail: null
 };
 
 /**
