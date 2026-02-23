@@ -1,5 +1,4 @@
 import { loadConfig } from '../config/manager.js';
-import { createMsalApp, getAccount, acquireTokenSilent } from '../auth/azure.js';
 import { validateNotionToken } from '../auth/notion.js';
 import { getSecret } from '../credentials/keychain.js';
 import { ACCOUNTS } from '../credentials/constants.js';
@@ -17,30 +16,22 @@ export async function statusCommand() {
     config = null;
   }
 
-  // Check 2: Azure AD
-  if (config && config.azureClientId && config.azureTenantId) {
+  // Check 2: Outlook calendar (ICS feed)
+  if (config && config.icsUrl) {
     try {
-      const msalApp = createMsalApp(config.azureClientId, config.azureTenantId);
-      const account = await getAccount(msalApp);
-
-      if (account) {
-        try {
-          // Try to acquire token silently (this handles auto-refresh)
-          await acquireTokenSilent(msalApp);
-          console.log(`[x] Outlook — connected as ${account.username} (token valid)`);
-        } catch (error) {
-          // Check if it's an InteractionRequiredAuthError
-          if (error.message && error.message.includes('interaction_required')) {
-            console.log('[ ] Outlook — token expired (run: prepare-my-day setup)');
-          } else {
-            console.log('[ ] Outlook — token expired (run: prepare-my-day setup)');
-          }
+      const response = await fetch(config.icsUrl);
+      if (response.ok) {
+        const text = await response.text();
+        if (text.includes('BEGIN:VCALENDAR')) {
+          console.log('[x] Outlook — calendar feed reachable');
+        } else {
+          console.log('[ ] Outlook — feed URL does not return ICS data (run: prepare-my-day setup)');
         }
       } else {
-        console.log('[ ] Outlook — not authenticated (run: prepare-my-day setup)');
+        console.log(`[ ] Outlook — feed returned HTTP ${response.status} (run: prepare-my-day setup)`);
       }
     } catch (error) {
-      console.log('[ ] Outlook — not authenticated (run: prepare-my-day setup)');
+      console.log('[ ] Outlook — feed unreachable (run: prepare-my-day setup)');
     }
   } else {
     console.log('[ ] Outlook — not configured (run: prepare-my-day setup)');

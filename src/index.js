@@ -13,7 +13,7 @@ program
 
 program
   .command('setup')
-  .description('Configure Azure AD and Notion authentication')
+  .description('Configure calendar feed and Notion authentication')
   .action(setupCommand);
 
 program

@@ -3,58 +3,58 @@ const require = createRequire(import.meta.url);
 const prompts = require('prompts');
 
 import ora from 'ora';
-import { createMsalApp, authenticateInteractive } from '../auth/azure.js';
 import { validateNotionToken, validateDatabase, createNotionClient } from '../auth/notion.js';
 import { extractDatabaseId } from '../utils/validation.js';
 import { setSecret } from '../credentials/keychain.js';
-import { saveConfig, loadConfig, updateConfig } from '../config/manager.js';
+import { updateConfig } from '../config/manager.js';
 import { ACCOUNTS } from '../credentials/constants.js';
+
+async function validateIcsUrl(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      return { valid: false, error: `HTTP ${response.status}: ${response.statusText}` };
+    }
+    const text = await response.text();
+    if (!text.includes('BEGIN:VCALENDAR')) {
+      return { valid: false, error: 'URL does not return valid ICS calendar data' };
+    }
+    return { valid: true };
+  } catch (error) {
+    return { valid: false, error: `Could not reach URL: ${error.message}` };
+  }
+}
 
 export async function setupCommand() {
   console.log('\nPrepare My Day — Setup\n');
 
   try {
-    // Step 1: Azure AD App Configuration
-    const azureConfig = await prompts([
-      {
-        type: 'text',
-        name: 'clientId',
-        message: 'Azure AD Application (client) ID:',
-        validate: value => value.trim() ? true : 'Client ID is required'
-      },
-      {
-        type: 'text',
-        name: 'tenantId',
-        message: 'Azure AD Directory (tenant) ID:',
-        validate: value => value.trim() ? true : 'Tenant ID is required'
-      }
-    ]);
+    // Step 1: Outlook Calendar ICS URL
+    const icsPrompt = await prompts({
+      type: 'text',
+      name: 'icsUrl',
+      message: 'Outlook calendar ICS URL:',
+      validate: value => value.trim() ? true : 'ICS URL is required'
+    });
 
-    if (!azureConfig.clientId || !azureConfig.tenantId) {
+    if (!icsPrompt.icsUrl) {
       console.log('\nSetup cancelled.');
       return;
     }
 
-    // Save Azure config immediately
-    await updateConfig({
-      azureClientId: azureConfig.clientId.trim(),
-      azureTenantId: azureConfig.tenantId.trim()
-    });
+    const icsUrl = icsPrompt.icsUrl.trim();
+    const icsSpinner = ora('Validating calendar feed...').start();
 
-    // Step 2: Azure AD Authentication
-    const msalApp = createMsalApp(azureConfig.clientId.trim(), azureConfig.tenantId.trim());
-    const spinner = ora('Waiting for browser authorization...').start();
-
-    try {
-      const account = await authenticateInteractive(msalApp);
-      spinner.succeed(`Authenticated as ${account.username}`);
-    } catch (error) {
-      spinner.fail('Azure AD authentication failed');
-      console.error(error.message);
+    const icsValidation = await validateIcsUrl(icsUrl);
+    if (!icsValidation.valid) {
+      icsSpinner.fail(icsValidation.error);
       return;
     }
 
-    // Step 3: Notion Integration Token
+    icsSpinner.succeed('Calendar feed connected');
+    await updateConfig({ icsUrl });
+
+    // Step 2: Notion Integration Token
     const notionTokenPrompt = await prompts({
       type: 'password',
       name: 'notionToken',
@@ -80,7 +80,7 @@ export async function setupCommand() {
     // Store token in Keychain
     await setSecret(ACCOUNTS.NOTION_TOKEN, notionToken);
 
-    // Step 4: Notion Database URLs
+    // Step 3: Notion Database URLs
     const notionClient = createNotionClient(notionToken);
 
     // Meetings database
@@ -137,7 +137,7 @@ export async function setupCommand() {
       daysDatabaseId: daysId
     });
 
-    // Step 5: Complete
+    // Complete
     console.log('\nSetup complete!\n');
 
   } catch (error) {
