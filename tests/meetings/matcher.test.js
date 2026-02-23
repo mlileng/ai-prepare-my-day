@@ -155,11 +155,14 @@ test('below threshold: dissimilar titles -> type none', () => {
 });
 
 test('multiple fuzzy matches: newest edited first, then best score as tiebreaker', () => {
-  const older = mockPage('Teem Standup', '2026-02-10T10:00:00.000Z');
-  const newer = mockPage('Teem Standup', '2026-02-20T10:00:00.000Z');
+  // "Teem Standup" does not contain "Beem Standup" and vice versa (no substring match)
+  // but their similarity is high: dist('teem standup', 'beem standup') = 1, maxLen = 12
+  // score = 1 - 1/12 ≈ 0.917 >= 0.8 -> fuzzy
+  const older = mockPage('Beem Standup', '2026-02-10T10:00:00.000Z');
+  const newer = mockPage('Beem Standup', '2026-02-20T10:00:00.000Z');
   const pages = [older, newer];
   const result = matchEvent('Teem Standup', pages);
-  // Both are identical so same score; newest should win
+  // Both pages have the same score; newest should win
   assert.equal(result.type, 'fuzzy');
   assert.equal(result.page, newer);
 });
