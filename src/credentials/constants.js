@@ -13,3 +13,4 @@ export const ACCOUNTS = {
 // Config directory and file paths
 export const CONFIG_DIR = path.join(os.homedir(), '.prepare-my-day');
 export const CONFIG_FILE = 'config.json';
+export const MSAL_CACHE_FILE = path.join(CONFIG_DIR, 'msal-cache.json');
