@@ -236,3 +236,45 @@ test('formatEventRange returns correct range string', () => {
   const result = formatEventRange(start, end);
   assert.match(result, /^\d{2}:\d{2}–\d{2}:\d{2}$/, 'Expected HH:MM–HH:MM format');
 });
+
+// ---------------------------------------------------------------------------
+// CalendarEvent display field tests
+// ---------------------------------------------------------------------------
+
+// 18. CalendarEvent includes displayStart and displayEnd fields
+test('CalendarEvent includes displayStart and displayEnd fields', () => {
+  const now   = new Date();
+  const start = Object.assign(
+    new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0),
+    { tz: 'America/Chicago' }
+  );
+  const end   = Object.assign(
+    new Date(now.getFullYear(), now.getMonth(), now.getDate(), 11, 0, 0),
+    { tz: 'America/Chicago' }
+  );
+  const event = mockEvent({ start, end, attendee: [
+    { val: 'mailto:alice@co.com', params: { PARTSTAT: 'ACCEPTED' } },
+    { val: 'mailto:bob@co.com',   params: { PARTSTAT: 'ACCEPTED' } },
+  ]});
+  const result = parseEvents(toCalendarData(event));
+  assert.equal(result.length, 1);
+  assert.equal(typeof result[0].displayStart, 'string', 'displayStart should be a string');
+  assert.equal(typeof result[0].displayEnd, 'string', 'displayEnd should be a string');
+  assert.match(result[0].displayStart, /^\d{2}:\d{2}$/, 'displayStart should be HH:MM format');
+  assert.match(result[0].displayEnd,   /^\d{2}:\d{2}$/, 'displayEnd should be HH:MM format');
+});
+
+// 19. CalendarEvent includes displayRange field in HH:MM–HH:MM format
+test('CalendarEvent includes displayRange field in HH:MM–HH:MM format', () => {
+  const now   = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9,  0, 0);
+  const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 30, 0);
+  const event = mockEvent({ start, end, attendee: [
+    { val: 'mailto:alice@co.com', params: { PARTSTAT: 'ACCEPTED' } },
+    { val: 'mailto:bob@co.com',   params: { PARTSTAT: 'ACCEPTED' } },
+  ]});
+  const result = parseEvents(toCalendarData(event));
+  assert.equal(result.length, 1);
+  assert.equal(typeof result[0].displayRange, 'string', 'displayRange should be a string');
+  assert.match(result[0].displayRange, /^\d{2}:\d{2}–\d{2}:\d{2}$/, 'displayRange should be HH:MM–HH:MM format');
+});
