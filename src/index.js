@@ -3,6 +3,8 @@
 import { Command } from 'commander';
 import { setupCommand } from './commands/setup.js';
 import { statusCommand } from './commands/status.js';
+import { syncCommand } from './commands/sync.js';
+import { cronSetupCommand } from './commands/cron-setup.js';
 
 const program = new Command();
 
@@ -21,4 +23,14 @@ program
   .description('Check authentication status')
   .action(statusCommand);
 
-program.parse(process.argv);
+program
+  .command('sync')
+  .description('Sync today\'s meetings to Notion')
+  .action(syncCommand);
+
+program
+  .command('cron-setup')
+  .description('Print crontab entry for scheduled daily runs')
+  .action(cronSetupCommand);
+
+await program.parseAsync(process.argv);
