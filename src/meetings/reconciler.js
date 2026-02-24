@@ -50,7 +50,7 @@ function printSummary(results) {
  * @param {Array<{uid: string, title: string, start: Date, end: Date}>} events - Today's CalendarEvents
  * @param {{ client: import('@notionhq/client').Client, dataSourceId: string, cache: { meetingMap: object } }} opts
  * @returns {Promise<{
- *   results: Array<{ eventTitle: string, matchType: 'exact'|'fuzzy'|'created'|'cached', notionPageId: string, score: number }>,
+ *   results: Array<{ eventTitle: string, matchType: 'exact'|'fuzzy'|'created'|'cached', notionPageId: string, score: number, start: string }>,
  *   updatedMeetingMap: object
  * }>}
  */
@@ -68,6 +68,7 @@ export async function reconcileMeetings(notionPages, events, { client, dataSourc
         matchType: 'cached',
         notionPageId: cache.meetingMap[eventHash],
         score: 0,
+        start: event.start.toISOString(),
       });
       continue;
     }
@@ -81,6 +82,7 @@ export async function reconcileMeetings(notionPages, events, { client, dataSourc
         matchType: 'exact',
         notionPageId: match.page.id,
         score: match.score,
+        start: event.start.toISOString(),
       });
       updatedMeetingMap[eventHash] = match.page.id;
     } else if (match.type === 'fuzzy') {
@@ -89,6 +91,7 @@ export async function reconcileMeetings(notionPages, events, { client, dataSourc
         matchType: 'fuzzy',
         notionPageId: match.page.id,
         score: match.score,
+        start: event.start.toISOString(),
       });
       updatedMeetingMap[eventHash] = match.page.id;
     } else {
@@ -99,6 +102,7 @@ export async function reconcileMeetings(notionPages, events, { client, dataSourc
         matchType: 'created',
         notionPageId: newPage.id,
         score: 0,
+        start: event.start.toISOString(),
       });
       updatedMeetingMap[eventHash] = newPage.id;
     }
