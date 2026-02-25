@@ -9,8 +9,6 @@
  */
 
 import { loadConfig } from '../config/manager.js';
-import { getSecret } from '../credentials/keychain.js';
-import { ACCOUNTS } from '../credentials/constants.js';
 import { createNotionClient } from '../auth/notion.js';
 import { loadCache, saveCache } from '../calendar/cache.js';
 import { resolveDataSourceId, fetchAllMeetingPages } from './notion.js';
@@ -24,7 +22,7 @@ import { reconcileMeetings } from './reconciler.js';
  *
  * Otherwise:
  *   1. Loads config and validates meetingsDatabaseId is configured
- *   2. Gets Notion token from keychain
+ *   2. Gets Notion token from config
  *   3. Creates Notion client and resolves the data_source_id
  *   4. Fetches all existing Notion meeting pages
  *   5. Loads cache (includes meetingMap for per-event idempotency)
@@ -51,9 +49,11 @@ export async function syncMeetings(events, { changed }) {
     throw new Error('Meetings database not configured. Run: prepare-my-day setup');
   }
 
-  // Get Notion token from keychain and create client
-  const token = await getSecret(ACCOUNTS.NOTION_TOKEN);
-  const client = createNotionClient(token);
+  // Get Notion token from config and create client
+  if (!config.notionToken) {
+    throw new Error('Notion token not configured. Run: prepare-my-day setup');
+  }
+  const client = createNotionClient(config.notionToken);
 
   // Resolve data source and fetch all existing meeting pages
   const dataSourceId = await resolveDataSourceId(client, config.meetingsDatabaseId);

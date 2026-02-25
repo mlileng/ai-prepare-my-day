@@ -5,9 +5,7 @@ const prompts = require('prompts');
 import ora from 'ora';
 import { validateNotionToken, validateDatabase, createNotionClient } from '../auth/notion.js';
 import { extractDatabaseId } from '../utils/validation.js';
-import { setSecret } from '../credentials/keychain.js';
 import { updateConfig } from '../config/manager.js';
-import { ACCOUNTS } from '../credentials/constants.js';
 
 async function validateIcsUrl(url) {
   try {
@@ -77,8 +75,8 @@ export async function setupCommand() {
 
     tokenSpinner.succeed(`Notion connected as ${tokenValidation.botName}`);
 
-    // Store token in Keychain
-    await setSecret(ACCOUNTS.NOTION_TOKEN, notionToken);
+    // Store token in config
+    await updateConfig({ notionToken });
 
     // Step 3: Notion Database URLs
     const notionClient = createNotionClient(notionToken);

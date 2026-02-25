@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { CONFIG_DIR, CONFIG_FILE } from '../credentials/constants.js';
+import { CONFIG_DIR, CONFIG_FILE } from './schema.js';
 import { DEFAULT_CONFIG, validateConfig } from './schema.js';
 
 /**

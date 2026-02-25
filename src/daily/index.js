@@ -10,8 +10,6 @@
  */
 
 import { loadConfig } from '../config/manager.js';
-import { getSecret } from '../credentials/keychain.js';
-import { ACCOUNTS } from '../credentials/constants.js';
 import { createNotionClient } from '../auth/notion.js';
 import { resolveDataSourceId } from '../meetings/notion.js';
 import { findTodayPage, createTodayPage, hasMeetingsSection, prependMeetingsSection } from './notion.js';
@@ -27,7 +25,7 @@ import { sortMeetingResults, buildMeetingBlocks } from './blocks.js';
  * Flow:
  *   1. If results is empty — log and return (no meetings to link)
  *   2. Load config, validate daysDatabaseId is configured
- *   3. Get Notion token from keychain, create client
+ *   3. Get Notion token from config, create client
  *   4. Resolve days data_source_id
  *   5. Sort results chronologically and build Notion to-do blocks
  *   6. Find today's daily page by date
@@ -55,9 +53,11 @@ export async function syncDailyPage(results) {
     throw new Error('Days database not configured. Run: prepare-my-day setup');
   }
 
-  // Get Notion token from keychain and create client
-  const token = await getSecret(ACCOUNTS.NOTION_TOKEN);
-  const client = createNotionClient(token);
+  // Get Notion token from config and create client
+  if (!config.notionToken) {
+    throw new Error('Notion token not configured. Run: prepare-my-day setup');
+  }
+  const client = createNotionClient(config.notionToken);
 
   // Resolve the days data_source_id from the database UUID
   const daysDataSourceId = await resolveDataSourceId(client, config.daysDatabaseId);

@@ -1,7 +1,5 @@
 import { loadConfig } from '../config/manager.js';
 import { validateNotionToken } from '../auth/notion.js';
-import { getSecret } from '../credentials/keychain.js';
-import { ACCOUNTS } from '../credentials/constants.js';
 
 export async function statusCommand() {
   console.log('\nPrepare My Day — Status\n');
@@ -38,21 +36,19 @@ export async function statusCommand() {
   }
 
   // Check 3: Notion token
-  try {
-    const notionToken = await getSecret(ACCOUNTS.NOTION_TOKEN);
-
-    if (notionToken) {
-      const validation = await validateNotionToken(notionToken);
+  if (config && config.notionToken) {
+    try {
+      const validation = await validateNotionToken(config.notionToken);
 
       if (validation.valid) {
         console.log(`[x] Notion — connected as ${validation.botName}`);
       } else {
         console.log('[ ] Notion — token invalid (run: prepare-my-day setup)');
       }
-    } else {
+    } catch (error) {
       console.log('[ ] Notion — not configured (run: prepare-my-day setup)');
     }
-  } catch (error) {
+  } else {
     console.log('[ ] Notion — not configured (run: prepare-my-day setup)');
   }
 

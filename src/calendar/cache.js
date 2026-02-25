@@ -11,7 +11,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { CONFIG_DIR } from '../credentials/constants.js';
+import { CONFIG_DIR } from '../config/schema.js';
 
 const CACHE_FILE = path.join(CONFIG_DIR, 'calendar-cache.json');
 
