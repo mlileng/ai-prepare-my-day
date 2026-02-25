@@ -103,6 +103,10 @@ export function parseEvents(calendarData, options = {}) {
     // 2. Cancelled filter (locked decision)
     if (event.status === 'CANCELLED') continue;
 
+    // 2b. Title prefix filter — skip events with non-actionable prefixes
+    const title = getTitle(event.summary).trim().toLowerCase();
+    if (title.startsWith('canceled:') || title.startsWith('following:')) continue;
+
     // 3. All-day filter (locked decision)
     if (event.start?.dateOnly === true || event.datetype === 'date') continue;
 

@@ -42,8 +42,8 @@ export async function findTodayPage(client, daysDataSourceId) {
 /**
  * Create today's daily page in the days database.
  *
- * Per locked decision: page has @Today title (template_mention_date: 'today'),
- * Date property set to today's YYYY-MM-DD, and content containing an H2
+ * Page has today's date as plain text title (e.g. "February 24, 2026"),
+ * Date property set to today's YYYY-MM-DD, and children containing an H2
  * "Meetings" heading followed by meeting to-do blocks.
  *
  * @param {import('@notionhq/client').Client} client - Authenticated Notion client
@@ -52,7 +52,13 @@ export async function findTodayPage(client, daysDataSourceId) {
  * @returns {Promise<import('@notionhq/client').PageObjectResponse>} The created page object
  */
 export async function createTodayPage(client, daysDataSourceId, meetingBlocks) {
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const titleStr = today.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
   const page = await client.pages.create({
     parent: {
@@ -64,14 +70,8 @@ export async function createTodayPage(client, daysDataSourceId, meetingBlocks) {
         type: 'title',
         title: [
           {
-            type: 'mention',
-            mention: {
-              type: 'template_mention',
-              template_mention: {
-                type: 'template_mention_date',
-                template_mention_date: 'today',
-              },
-            },
+            type: 'text',
+            text: { content: titleStr },
           },
         ],
       },
@@ -80,7 +80,7 @@ export async function createTodayPage(client, daysDataSourceId, meetingBlocks) {
         date: { start: todayStr },
       },
     },
-    content: [
+    children: [
       {
         type: 'heading_2',
         heading_2: {

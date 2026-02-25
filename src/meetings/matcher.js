@@ -17,14 +17,22 @@ import { distance } from 'fastest-levenshtein';
 // --------------------------------------------------------------------------
 
 /**
- * Normalize a title for comparison: lowercase and trim whitespace.
+ * Normalize a title for comparison.
+ * - Lowercase and trim whitespace
+ * - Collapse multiple spaces to single space
+ * - Normalize smart quotes to ASCII equivalents
  * Returns empty string for null/undefined input.
  *
  * @param {string|null|undefined} title
  * @returns {string}
  */
 export function normalizeTitle(title) {
-  return (title ?? '').toLowerCase().trim();
+  return (title ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"');
 }
 
 // --------------------------------------------------------------------------
@@ -120,8 +128,8 @@ export function matchEvent(eventTitle, notionPages, threshold = 0.8) {
       editedAt: new Date(page.last_edited_time).getTime(),
     }));
 
-  // Sort: newest first, then best score as tiebreaker (locked decision)
-  fuzzy.sort((a, b) => b.editedAt - a.editedAt || b.score - a.score);
+  // Sort: best score first, then newest as tiebreaker
+  fuzzy.sort((a, b) => b.score - a.score || b.editedAt - a.editedAt);
 
   if (fuzzy.length > 0 && fuzzy[0].score >= threshold) {
     return { type: 'fuzzy', page: fuzzy[0].page, score: fuzzy[0].score };
