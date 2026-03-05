@@ -1,0 +1,7 @@
+{
+  "meetingsDatabaseId": "your-notion-meetings-database-id",
+  "daysDatabaseId": "your-notion-days-database-id",
+  "icsUrl": "https://outlook.office365.com/owa/calendar/your-calendar-id/calendar.ics",
+  "userEmail": "you@example.com",
+  "notionToken": "ntn_your-notion-integration-token"
+}
