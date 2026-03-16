@@ -141,13 +141,13 @@ export function parseEvents(calendarData, options = {}) {
     }
 
     // 6. Attendee / solo filter (locked decision)
-    if (feedHasAttendeeData) {
-      const attendees = normalizeAttendees(event);
+    const attendees = normalizeAttendees(event);
+    if (attendees.length > 0) {
+      // This event has attendee data — apply solo filter
       const realAttendees = attendees.filter(isRealAttendee);
-      // Solo event: only one real attendee (or none)
       if (realAttendees.length <= 1) continue;
-    } else {
-      // Outlook ICS fallback: no attendee data on any event — emit one-time warning
+    } else if (!feedHasAttendeeData) {
+      // No attendee data anywhere in the feed — Outlook ICS fallback, emit one-time warning
       if (!attendeeWarningEmitted) {
         console.warn(
           'Calendar feed lacks attendee data — solo event filtering disabled. ' +
@@ -157,6 +157,8 @@ export function parseEvents(calendarData, options = {}) {
       }
       // Include all timed events (attendee filtering skipped)
     }
+    // else: feedHasAttendeeData=true but this event has no attendee field —
+    // cannot determine solo status, so include the event
 
     // 7. Build CalendarEvent objects for each instance
     for (const instance of instances) {
