@@ -6,36 +6,25 @@
  */
 
 /**
- * Format a Date object as a zero-padded HH:MM string.
- * Uses the timezone attached to the date object as `.tz` (node-ical DateWithTimeZone),
- * falling back to system timezone if the `.tz` value is unrecognised (e.g., Windows IDs).
+ * Format a Date object as a zero-padded HH:MM string in the system's local timezone.
  *
- * @param {Date & { tz?: string }} date - A Date, optionally with an IANA timezone string in `.tz`
+ * Always uses the system timezone so that all events display at the time the
+ * user will experience them locally, regardless of what timezone the event
+ * was originally created in. This keeps display times consistent with the
+ * sort order (which is UTC-based) and with the user's daily page view.
+ *
+ * @param {Date} date - A Date object (node-ical DateWithTimeZone or plain Date)
  * @returns {string} Time formatted as "HH:MM"
  */
 export function formatEventTime(date) {
-  const timezone = date?.tz;
-
-  try {
-    const formatter = new Intl.DateTimeFormat('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      ...(timezone ? { timeZone: timezone } : {})
-    });
-    return formatter.format(date);
-  } catch (_err) {
-    // Windows-style timezone IDs (e.g., 'Eastern Standard Time') cause a RangeError
-    // in Intl.DateTimeFormat. Fall back to the system's local timezone.
-    const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const formatter = new Intl.DateTimeFormat('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: systemTimezone
-    });
-    return formatter.format(date);
-  }
+  const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: systemTimezone,
+  });
+  return formatter.format(date);
 }
 
 /**

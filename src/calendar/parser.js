@@ -114,9 +114,28 @@ export function parseEvents(calendarData, options = {}) {
     let instances = [];
     try {
       if (event.rrule) {
-        const expanded = ical.expandRecurringEvent(event, { from: todayStart, to: todayEnd });
-        // Filter out full-day instances that may sneak through
-        instances = expanded.filter(inst => !inst.isFullDay);
+        // Always expand from the event's own DTSTART rather than from today.
+        //
+        // node-ical's rrule-temporal has a jump optimisation that, when the
+        // search window starts more than one recurrence interval after DTSTART,
+        // advances the internal dtstart forward by that interval. This causes
+        // it to skip RDATE-based occurrences that fall between the jumped
+        // dtstart and the actual occurrence date.
+        //
+        // Starting from DTSTART guarantees steps=0 (no jump), so all RRULE
+        // and RDATE occurrences up to todayEnd are generated correctly. We
+        // then filter the results down to actual today instances.
+        //
+        // Guard: if DTSTART is after today there can be no instances today.
+        if (event.start > todayEnd) {
+          instances = [];
+          continue;
+        }
+        const expanded = ical.expandRecurringEvent(event, { from: event.start, to: todayEnd });
+        // Filter to actual today and exclude full-day instances
+        instances = expanded.filter(
+          inst => !inst.isFullDay && inst.start >= todayStart && inst.start <= todayEnd
+        );
       } else {
         // Non-recurring: check if the event falls within today
         if (event.start >= todayStart && event.start <= todayEnd) {
@@ -183,7 +202,7 @@ export function parseEvents(calendarData, options = {}) {
   }
 
   // 8. Sort by start time ascending
-  results.sort((a, b) => a.start - b.start);
+  results.sort((a, b) => a.start.getTime() - b.start.getTime());
 
   return results;
 }
