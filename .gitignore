@@ -1,5 +1,8 @@
 node_modules/
 .claude/
 .planning/
+_bmad/
+_bmad-output/
 *.log
 .DS_Store
+NOTES.local.md

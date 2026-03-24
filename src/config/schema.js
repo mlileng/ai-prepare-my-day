@@ -14,7 +14,8 @@ export const DEFAULT_CONFIG = {
   daysDatabaseId: null,
   icsUrl: null,
   userEmail: null,
-  notionToken: null
+  notionToken: null,
+  suppressedMeetings: []
 };
 
 /**

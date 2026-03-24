@@ -31,7 +31,7 @@ import { loadConfig } from '../config/manager.js';
 export async function getTodaysMeetings() {
   // 1. Load config
   const config = await loadConfig();
-  const { icsUrl, userEmail } = config;
+  const { icsUrl, userEmail, suppressedMeetings } = config;
 
   // 2. Validate ICS URL is configured
   if (!icsUrl) {
@@ -43,7 +43,7 @@ export async function getTodaysMeetings() {
   const calendarData = await fetchCalendar(icsUrl);
 
   // 4. Parse today's events via the parser from plan 02-01
-  const events = parseEvents(calendarData, { userEmail });
+  const events = parseEvents(calendarData, { userEmail, suppressedMeetings });
 
   // 5. Detect changes via content hash cache
   const changed = await hasEventsChanged(events);

@@ -73,7 +73,7 @@ function isRealAttendee(att) {
  * @returns {CalendarEvent[]}
  */
 export function parseEvents(calendarData, options = {}) {
-  const { userEmail } = options;
+  const { userEmail, suppressedMeetings = [] } = options;
 
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
@@ -106,6 +106,9 @@ export function parseEvents(calendarData, options = {}) {
     // 2b. Title prefix filter — skip events with non-actionable prefixes
     const title = getTitle(event.summary).trim().toLowerCase();
     if (title.startsWith('canceled:') || title.startsWith('following:')) continue;
+
+    // 2c. Suppression list filter — skip events whose title contains a suppressed term
+    if (suppressedMeetings.some(term => title.includes(term.toLowerCase()))) continue;
 
     // 3. All-day filter (locked decision)
     if (event.start?.dateOnly === true || event.datetype === 'date') continue;

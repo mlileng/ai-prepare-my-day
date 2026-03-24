@@ -264,6 +264,51 @@ test('CalendarEvent includes displayStart and displayEnd fields', () => {
   assert.match(result[0].displayEnd,   /^\d{2}:\d{2}$/, 'displayEnd should be HH:MM format');
 });
 
+// ---------------------------------------------------------------------------
+// Suppression list tests
+// ---------------------------------------------------------------------------
+
+// 20. Exact-match suppression: event title matching a suppressed term exactly is excluded
+test('suppression list: excludes event whose title exactly matches a suppressed term', () => {
+  const event = mockEvent({ summary: 'Work Block', attendee: [
+    { val: 'mailto:alice@co.com', params: { PARTSTAT: 'ACCEPTED' } },
+    { val: 'mailto:bob@co.com',   params: { PARTSTAT: 'ACCEPTED' } },
+  ]});
+  const result = parseEvents(toCalendarData(event), { suppressedMeetings: ['Work Block'] });
+  assert.equal(result.length, 0);
+});
+
+// 21. Substring suppression: term suppresses event whose title contains it as a substring
+test('suppression list: excludes event whose title contains a suppressed term as substring', () => {
+  const event = mockEvent({ summary: 'Work Block (Meetings are Fine)', attendee: [
+    { val: 'mailto:alice@co.com', params: { PARTSTAT: 'ACCEPTED' } },
+    { val: 'mailto:bob@co.com',   params: { PARTSTAT: 'ACCEPTED' } },
+  ]});
+  const result = parseEvents(toCalendarData(event), { suppressedMeetings: ['Work Block'] });
+  assert.equal(result.length, 0);
+});
+
+// 22. Case-insensitivity: suppressed term in different casing still matches
+test('suppression list: match is case-insensitive', () => {
+  const event = mockEvent({ summary: 'Work Block (Meetings are Fine)', attendee: [
+    { val: 'mailto:alice@co.com', params: { PARTSTAT: 'ACCEPTED' } },
+    { val: 'mailto:bob@co.com',   params: { PARTSTAT: 'ACCEPTED' } },
+  ]});
+  const result = parseEvents(toCalendarData(event), { suppressedMeetings: ['work block'] });
+  assert.equal(result.length, 0);
+});
+
+// 23. Non-matching term: event whose title does not contain the suppressed term is included
+test('suppression list: includes event whose title does not match any suppressed term', () => {
+  const event = mockEvent({ summary: 'Team Standup', attendee: [
+    { val: 'mailto:alice@co.com', params: { PARTSTAT: 'ACCEPTED' } },
+    { val: 'mailto:bob@co.com',   params: { PARTSTAT: 'ACCEPTED' } },
+  ]});
+  const result = parseEvents(toCalendarData(event), { suppressedMeetings: ['Work Block'] });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].title, 'Team Standup');
+});
+
 // 19. CalendarEvent includes displayRange field in HH:MM–HH:MM format
 test('CalendarEvent includes displayRange field in HH:MM–HH:MM format', () => {
   const now   = new Date();
