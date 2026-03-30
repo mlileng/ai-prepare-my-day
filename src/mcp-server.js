@@ -1,8 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod';
 import { getTodaysMeetings } from './calendar/index.js';
 import { syncMeetings } from './meetings/index.js';
 import { syncDailyPage } from './daily/index.js';
+import { loadConfig } from './config/manager.js';
 
 // Redirect console.log to stderr — stdout is the MCP stdio protocol channel.
 // Imports are hoisted, but the pipeline functions only call console.log at
@@ -58,6 +60,70 @@ server.tool(
     }
 
     return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.tool(
+  'post_to_teams',
+  'Posts a message to the configured Teams channel via Power Automate webhook. IRREVERSIBLE — do not call speculatively or as a retry. Call only when the message is final and ready to send.',
+  {
+    message: z.string().describe('The message text to post')
+  },
+  async ({ message }) => {
+    try {
+      // Validate input
+      if (!message || typeof message !== 'string' || message.trim() === '') {
+        return { content: [{ type: 'text', text: JSON.stringify({ posted: false, error: 'message is required' }, null, 2) }] };
+      }
+
+      // Load config
+      let config;
+      try {
+        config = await loadConfig();
+      } catch (err) {
+        return { content: [{ type: 'text', text: JSON.stringify({ posted: false, error: err.message }, null, 2) }] };
+      }
+
+      // Check webhook is configured
+      if (!config.teamsWebhookUrl) {
+        return { content: [{ type: 'text', text: JSON.stringify({ posted: false, error: 'Teams webhook not configured. Run: prepare-my-day setup' }, null, 2) }] };
+      }
+
+      // Build Adaptive Card payload
+      const payload = {
+        type: 'message',
+        attachments: [{
+          contentType: 'application/vnd.microsoft.card.adaptive',
+          contentUrl: null,
+          content: {
+            $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+            type: 'AdaptiveCard',
+            version: '1.3',
+            body: [{ type: 'TextBlock', text: message, wrap: true }]
+          }
+        }]
+      };
+
+      // POST to webhook
+      let response;
+      try {
+        response = await fetch(config.teamsWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        return { content: [{ type: 'text', text: JSON.stringify({ posted: false, error: `Teams: ${err.message}` }, null, 2) }] };
+      }
+
+      if (!response.ok) {
+        return { content: [{ type: 'text', text: JSON.stringify({ posted: false, error: `Teams: HTTP ${response.status}` }, null, 2) }] };
+      }
+
+      return { content: [{ type: 'text', text: JSON.stringify({ posted: true }, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text', text: JSON.stringify({ posted: false, error: err.message }, null, 2) }] };
+    }
   }
 );
 

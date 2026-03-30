@@ -135,6 +135,17 @@ export async function setupCommand() {
       daysDatabaseId: daysId
     });
 
+    // Step 4: Teams webhook URL (optional)
+    const teamsPrompt = await prompts({
+      type: 'text',
+      name: 'teamsWebhookUrl',
+      message: 'Teams webhook URL (optional — press Enter to skip):'
+    });
+
+    if (teamsPrompt.teamsWebhookUrl && teamsPrompt.teamsWebhookUrl.trim()) {
+      await updateConfig({ teamsWebhookUrl: teamsPrompt.teamsWebhookUrl.trim() });
+    }
+
     // Complete
     console.log('\nSetup complete!\n');
 

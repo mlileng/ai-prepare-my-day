@@ -15,7 +15,8 @@ export const DEFAULT_CONFIG = {
   icsUrl: null,
   userEmail: null,
   notionToken: null,
-  suppressedMeetings: []
+  suppressedMeetings: [],
+  teamsWebhookUrl: null
 };
 
 /**
