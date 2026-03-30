@@ -6,3 +6,4 @@ _bmad-output/
 *.log
 .DS_Store
 NOTES.local.md
+.mcp.json
