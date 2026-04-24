@@ -78,7 +78,7 @@ export async function loadCache() {
  *
  * @param {string} date - YYYY-MM-DD date string
  * @param {string} hash - MD5 hex digest of events
- * @param {object} [meetingMap={}] - Map of eventHash -> notionPageId
+ * @param {object} [meetingMap={}] - Map of eventHash -> filePath (vault-relative path to the instance file)
  * @returns {Promise<void>}
  */
 export async function saveCache(date, hash, meetingMap = {}) {

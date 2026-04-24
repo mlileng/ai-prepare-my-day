@@ -18,7 +18,7 @@ const server = new McpServer({
 
 server.tool(
   'sync_calendar',
-  "Syncs today's calendar meetings to Notion and updates the daily page. Returns structured JSON with meeting counts and any errors. Safe to call multiple times — idempotent via content hash cache.",
+  "Syncs today's calendar meetings to the Obsidian vault and creates a daily note. Returns structured JSON with meeting counts and any errors. Safe to call multiple times — idempotent via content hash cache.",
   {}, // no input parameters
   async () => {
     const result = {

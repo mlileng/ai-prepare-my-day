@@ -20,7 +20,6 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.28.0",
-    "@notionhq/client": "^5.9.0",
     "commander": "^14.0.3",
     "fastest-levenshtein": "^1.0.16",
     "node-ical": "^0.25.4",
