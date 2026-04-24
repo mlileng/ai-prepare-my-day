@@ -73,7 +73,7 @@ export async function loadCache() {
 /**
  * Persist the cache to disk.
  *
- * Accepts an optional meetingMap (eventHash -> notionPageId) that is written
+ * Accepts an optional meetingMap (eventHash -> filePath) that is written
  * alongside the date and event hash for idempotent re-run support.
  *
  * @param {string} date - YYYY-MM-DD date string
