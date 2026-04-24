@@ -1,29 +1,14 @@
 /**
- * Helpers for building and sorting Notion meeting block content.
+ * Helpers for building and sorting meeting content for daily pages.
  *
- * Provides formatting, sorting, and Notion block construction utilities
- * used by syncDailyPage to produce to-do checkboxes with time prefixes
- * and @page mentions on the daily page.
+ * Provides sorting and markdown wikilink generation utilities
+ * used by syncDailyPage to produce markdown meeting lines
+ * for the daily page.
  *
  * @module daily/blocks
  */
 
-/**
- * Format a Date object as a 12-hour time string with AM/PM.
- *
- * Per locked decision: 12-hour format with AM/PM, no leading zero on hour.
- * Examples: "9:00 AM", "10:30 PM", "12:00 PM"
- *
- * @param {Date} date - The date/time to format
- * @returns {string} 12-hour time string, e.g. "9:00 AM"
- */
-export function formatTime(date) {
-  return date.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-}
+import { formatEventTime } from '../utils/timezone.js';
 
 /**
  * Sort meeting results chronologically with alphabetical tiebreaker.
@@ -32,9 +17,9 @@ export function formatTime(date) {
  * tiebreaker is alphabetical by eventTitle.
  * Does NOT mutate the input array — returns a new sorted array.
  *
- * @param {Array<{ start: string, eventTitle: string, notionPageId: string, matchType: string, score: number }>} results
+ * @param {Array<{ start: string, eventTitle: string, filePath: string, matchType: string, score: number }>} results
  *   Array of meeting results from reconcileMeetings, each with ISO start string
- * @returns {Array<{ start: string, eventTitle: string, notionPageId: string, matchType: string, score: number }>}
+ * @returns {Array<{ start: string, eventTitle: string, filePath: string, matchType: string, score: number }>}
  *   New sorted array
  */
 export function sortMeetingResults(results) {
@@ -46,34 +31,21 @@ export function sortMeetingResults(results) {
 }
 
 /**
- * Build an array of Notion to-do block objects from sorted meeting results.
+ * Build an array of markdown wikilink strings from sorted meeting results.
  *
- * Per locked decision: each block is an unchecked to-do checkbox with
- * a time prefix (12-hour format) and a native @page mention linking to
- * the meeting's Notion page.
+ * Each line is formatted as:
+ * "- HH:MM [[filePath|eventTitle]]"
  *
- * @param {Array<{ start: string, notionPageId: string, eventTitle: string }>} sortedResults
+ * The .md extension is stripped from filePath before placing it in the wikilink.
+ *
+ * @param {Array<{ start: string, filePath: string, eventTitle: string }>} sortedResults
  *   Sorted array of meeting results from sortMeetingResults
- * @returns {Array<object>} Array of Notion to_do block objects
+ * @returns {Array<string>} Array of markdown wikilink strings
  */
-export function buildMeetingBlocks(sortedResults) {
-  return sortedResults.map(result => ({
-    type: 'to_do',
-    to_do: {
-      rich_text: [
-        {
-          type: 'text',
-          text: { content: `${formatTime(new Date(result.start))} ` },
-        },
-        {
-          type: 'mention',
-          mention: {
-            type: 'page',
-            page: { id: result.notionPageId },
-          },
-        },
-      ],
-      checked: false,
-    },
-  }));
+export function buildMeetingLines(sortedResults) {
+  return sortedResults.map(result => {
+    const time = formatEventTime(new Date(result.start));
+    const wikiPath = result.filePath.replace(/\.md$/, '');
+    return `- ${time} [[${wikiPath}|${result.eventTitle}]]`;
+  });
 }
