@@ -35,6 +35,7 @@ test('unmatched recurring event creates both series stub and linked instance', a
   assert.equal(results.length, 1);
   assert.equal(results[0].matchType, 'created');
   assert.equal(results[0].filePath, 'meetings/instances/2026-04-24-b2b-internal-update.md');
+  assert.equal(results[0].seriesCreated, true);
 
   // Series stub created
   const seriesPath = path.join(vault, 'meetings', 'series', 'b2b-internal-update.md');
@@ -66,6 +67,7 @@ test('unmatched non-recurring event creates instance only — no series file', a
   });
 
   assert.equal(results[0].matchType, 'created');
+  assert.equal(results[0].seriesCreated, false);
 
   // No series file created
   const seriesDir = await fs.readdir(path.join(vault, 'meetings', 'series'));
