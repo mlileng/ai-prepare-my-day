@@ -14,7 +14,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { CONFIG_DIR } from '../../src/credentials/constants.js';
+import { CONFIG_DIR } from '../../src/config/schema.js';
 import { hashEvents, loadCache, saveCache, hasEventsChanged } from '../../src/calendar/cache.js';
 
 // --------------------------------------------------------------------------
