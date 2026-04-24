@@ -5,9 +5,9 @@ const SERIES_DIR = 'meetings/series';
 const INSTANCES_DIR = 'meetings/instances';
 
 function parseFrontmatterName(content) {
-  const block = content.match(/^---\n([\s\S]*?)\n---/);
+  const block = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!block) return null;
-  const match = block[1].match(/^name:\s*"?([^"\n]+)"?\s*$/m);
+  const match = block[1].match(/^name:\s*"?([^"\n\r]+)"?\s*$/m);
   return match ? match[1].trim() : null;
 }
 
