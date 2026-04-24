@@ -3,23 +3,29 @@ const require = createRequire(import.meta.url);
 const prompts = require('prompts');
 
 import ora from 'ora';
-import { validateNotionToken, validateDatabase, createNotionClient } from '../auth/notion.js';
-import { extractDatabaseId } from '../utils/validation.js';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { updateConfig } from '../config/manager.js';
 
 async function validateIcsUrl(url) {
   try {
     const response = await fetch(url);
-    if (!response.ok) {
-      return { valid: false, error: `HTTP ${response.status}: ${response.statusText}` };
-    }
+    if (!response.ok) return { valid: false, error: `HTTP ${response.status}: ${response.statusText}` };
     const text = await response.text();
-    if (!text.includes('BEGIN:VCALENDAR')) {
-      return { valid: false, error: 'URL does not return valid ICS calendar data' };
-    }
+    if (!text.includes('BEGIN:VCALENDAR')) return { valid: false, error: 'URL does not return valid ICS calendar data' };
     return { valid: true };
   } catch (error) {
     return { valid: false, error: `Could not reach URL: ${error.message}` };
+  }
+}
+
+async function validateVaultPath(vaultPath) {
+  try {
+    const obsidianDir = path.join(vaultPath, '.obsidian');
+    await fs.access(obsidianDir);
+    return { valid: true };
+  } catch {
+    return { valid: false, error: 'Path does not exist or is not an Obsidian vault (no .obsidian/ folder found)' };
   }
 }
 
@@ -32,125 +38,55 @@ export async function setupCommand() {
       type: 'text',
       name: 'icsUrl',
       message: 'Outlook calendar ICS URL:',
-      validate: value => value.trim() ? true : 'ICS URL is required'
+      validate: value => value.trim() ? true : 'ICS URL is required',
     });
-
-    if (!icsPrompt.icsUrl) {
-      console.log('\nSetup cancelled.');
-      return;
-    }
+    if (!icsPrompt.icsUrl) { console.log('\nSetup cancelled.'); return; }
 
     const icsUrl = icsPrompt.icsUrl.trim();
     const icsSpinner = ora('Validating calendar feed...').start();
-
     const icsValidation = await validateIcsUrl(icsUrl);
-    if (!icsValidation.valid) {
-      icsSpinner.fail(icsValidation.error);
-      return;
-    }
-
+    if (!icsValidation.valid) { icsSpinner.fail(icsValidation.error); return; }
     icsSpinner.succeed('Calendar feed connected');
     await updateConfig({ icsUrl });
 
-    // Step 2: Notion Integration Token
-    const notionTokenPrompt = await prompts({
-      type: 'password',
-      name: 'notionToken',
-      message: 'Notion integration token:'
-    });
-
-    if (!notionTokenPrompt.notionToken) {
-      console.log('\nSetup cancelled.');
-      return;
-    }
-
-    const notionToken = notionTokenPrompt.notionToken.trim();
-    const tokenSpinner = ora('Validating Notion token...').start();
-
-    const tokenValidation = await validateNotionToken(notionToken);
-    if (!tokenValidation.valid) {
-      tokenSpinner.fail(tokenValidation.error);
-      return;
-    }
-
-    tokenSpinner.succeed(`Notion connected as ${tokenValidation.botName}`);
-
-    // Store token in config
-    await updateConfig({ notionToken });
-
-    // Step 3: Notion Database URLs
-    const notionClient = createNotionClient(notionToken);
-
-    // Meetings database
-    const meetingsPrompt = await prompts({
+    // Step 2: Obsidian vault path
+    const vaultPrompt = await prompts({
       type: 'text',
-      name: 'meetingsUrl',
-      message: 'Notion Meetings database URL:',
-      validate: value => extractDatabaseId(value) ? true : 'Could not extract database ID from URL'
+      name: 'obsidianVaultPath',
+      message: 'Obsidian vault path (absolute):',
+      validate: value => value.trim() ? true : 'Vault path is required',
     });
+    if (!vaultPrompt.obsidianVaultPath) { console.log('\nSetup cancelled.'); return; }
 
-    if (!meetingsPrompt.meetingsUrl) {
-      console.log('\nSetup cancelled.');
-      return;
-    }
+    const obsidianVaultPath = vaultPrompt.obsidianVaultPath.trim();
+    const vaultSpinner = ora('Validating vault...').start();
+    const vaultValidation = await validateVaultPath(obsidianVaultPath);
+    if (!vaultValidation.valid) { vaultSpinner.fail(vaultValidation.error); return; }
+    vaultSpinner.succeed(`Vault connected: ${obsidianVaultPath}`);
+    await updateConfig({ obsidianVaultPath });
 
-    const meetingsId = extractDatabaseId(meetingsPrompt.meetingsUrl);
-    const meetingsSpinner = ora('Validating Meetings database...').start();
-
-    const meetingsValidation = await validateDatabase(notionClient, meetingsId, 'meetings');
-    if (!meetingsValidation.valid) {
-      meetingsSpinner.fail(meetingsValidation.error);
-      return;
-    }
-
-    meetingsSpinner.succeed(`Meetings database: ${meetingsValidation.title}`);
-
-    // Days database
-    const daysPrompt = await prompts({
+    // Step 3: User email (for declined-event filtering)
+    const emailPrompt = await prompts({
       type: 'text',
-      name: 'daysUrl',
-      message: 'Notion Days database URL:',
-      validate: value => extractDatabaseId(value) ? true : 'Could not extract database ID from URL'
+      name: 'userEmail',
+      message: 'Your email address (for filtering declined meetings):',
     });
-
-    if (!daysPrompt.daysUrl) {
-      console.log('\nSetup cancelled.');
-      return;
+    if (emailPrompt.userEmail && emailPrompt.userEmail.trim()) {
+      await updateConfig({ userEmail: emailPrompt.userEmail.trim() });
     }
-
-    const daysId = extractDatabaseId(daysPrompt.daysUrl);
-    const daysSpinner = ora('Validating Days database...').start();
-
-    const daysValidation = await validateDatabase(notionClient, daysId, 'days');
-    if (!daysValidation.valid) {
-      daysSpinner.fail(daysValidation.error);
-      return;
-    }
-
-    daysSpinner.succeed(`Days database: ${daysValidation.title}`);
-
-    // Save database IDs to config
-    await updateConfig({
-      meetingsDatabaseId: meetingsId,
-      daysDatabaseId: daysId
-    });
 
     // Step 4: Teams webhook URL (optional)
     const teamsPrompt = await prompts({
       type: 'text',
       name: 'teamsWebhookUrl',
-      message: 'Teams webhook URL (optional — press Enter to skip):'
+      message: 'Teams webhook URL (optional — press Enter to skip):',
     });
-
     if (teamsPrompt.teamsWebhookUrl && teamsPrompt.teamsWebhookUrl.trim()) {
       await updateConfig({ teamsWebhookUrl: teamsPrompt.teamsWebhookUrl.trim() });
     }
 
-    // Complete
     console.log('\nSetup complete!\n');
-
   } catch (error) {
-    // Handle prompts cancellation (Ctrl+C)
     if (error.message === 'User force closed the prompt') {
       console.log('\nSetup cancelled.');
       return;
