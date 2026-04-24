@@ -25,7 +25,7 @@ export async function syncMeetings(events, { changed }) {
   });
 
   await saveCache(
-    cache.date ?? date,
+    date,
     cache.hash ?? '',
     updatedMeetingMap
   );
