@@ -1,5 +1,5 @@
 import { matchEvent } from './matcher.js';
-import { createMeetingInstance } from './obsidian.js';
+import { createMeetingInstance, createMeetingSeries } from './obsidian.js';
 import { hashSingleEvent } from '../calendar/cache.js';
 
 function toSlug(title) {
@@ -11,8 +11,10 @@ function printSummary(results) {
   const fuzzy = results.filter(r => r.matchType === 'fuzzy').length;
   const created = results.filter(r => r.matchType === 'created').length;
   const cached = results.filter(r => r.matchType === 'cached').length;
+  const seriesCreated = results.filter(r => r.seriesCreated).length;
 
   let summary = `Meetings: ${exact} matched, ${fuzzy} fuzzy matched, ${created} created`;
+  if (seriesCreated > 0) summary += ` (${seriesCreated} series stub${seriesCreated > 1 ? 's' : ''} auto-created)`;
   if (cached > 0) summary += `, ${cached} unchanged (cached)`;
   console.log(summary);
 }
@@ -49,14 +51,26 @@ export async function reconcileMeetings(seriesPages, events, { vaultPath, date, 
       score = match.score;
     } else {
       seriesSlug = toSlug(event.title);
-      seriesId = null;
       matchType = 'created';
       score = 0;
+      if (event.isRecurring) {
+        const seriesRelPath = await createMeetingSeries(vaultPath, event, date, seriesSlug);
+        seriesId = seriesRelPath;
+      } else {
+        seriesId = null;
+      }
     }
 
     const filePath = await createMeetingInstance(vaultPath, event, date, seriesSlug, seriesId);
 
-    results.push({ eventTitle: event.title, matchType, filePath, score, start: event.start.toISOString() });
+    results.push({
+      eventTitle: event.title,
+      matchType,
+      filePath,
+      score,
+      start: event.start.toISOString(),
+      seriesCreated: matchType === 'created' && !!event.isRecurring,
+    });
     updatedMeetingMap[eventHash] = filePath;
   }
 
