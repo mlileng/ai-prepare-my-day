@@ -10,11 +10,9 @@ export const CONFIG_FILE = 'config.json';
  * Partial setup is allowed (values can be null)
  */
 export const DEFAULT_CONFIG = {
-  meetingsDatabaseId: null,
-  daysDatabaseId: null,
+  obsidianVaultPath: null,
   icsUrl: null,
   userEmail: null,
-  notionToken: null,
   suppressedMeetings: [],
   teamsWebhookUrl: null
 };
