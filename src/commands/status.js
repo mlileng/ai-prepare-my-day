@@ -1,20 +1,24 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { loadConfig } from '../config/manager.js';
-import { validateNotionToken } from '../auth/notion.js';
+
+async function pathExists(p) {
+  try { await fs.access(p); return true; } catch { return false; }
+}
 
 export async function statusCommand() {
   console.log('\nPrepare My Day — Status\n');
 
-  // Check 1: Config file
   let config;
   try {
     config = await loadConfig();
     console.log('[x] Config — ~/.prepare-my-day/config.json');
-  } catch (error) {
+  } catch {
     console.log('[ ] Config — not found (run: prepare-my-day setup)');
     config = null;
   }
 
-  // Check 2: Outlook calendar (ICS feed)
+  // Outlook ICS feed
   if (config && config.icsUrl) {
     try {
       const response = await fetch(config.icsUrl);
@@ -28,41 +32,35 @@ export async function statusCommand() {
       } else {
         console.log(`[ ] Outlook — feed returned HTTP ${response.status} (run: prepare-my-day setup)`);
       }
-    } catch (error) {
+    } catch {
       console.log('[ ] Outlook — feed unreachable (run: prepare-my-day setup)');
     }
   } else {
     console.log('[ ] Outlook — not configured (run: prepare-my-day setup)');
   }
 
-  // Check 3: Notion token
-  if (config && config.notionToken) {
-    try {
-      const validation = await validateNotionToken(config.notionToken);
-
-      if (validation.valid) {
-        console.log(`[x] Notion — connected as ${validation.botName}`);
-      } else {
-        console.log('[ ] Notion — token invalid (run: prepare-my-day setup)');
-      }
-    } catch (error) {
-      console.log('[ ] Notion — not configured (run: prepare-my-day setup)');
+  // Obsidian vault
+  if (config && config.obsidianVaultPath) {
+    const vaultExists = await pathExists(config.obsidianVaultPath);
+    if (vaultExists) {
+      console.log(`[x] Obsidian vault — ${config.obsidianVaultPath}`);
+    } else {
+      console.log(`[ ] Obsidian vault — path not found: ${config.obsidianVaultPath}`);
     }
-  } else {
-    console.log('[ ] Notion — not configured (run: prepare-my-day setup)');
-  }
 
-  // Check 4: Notion databases
-  if (config && config.meetingsDatabaseId) {
-    console.log(`[x] Meetings DB — ${config.meetingsDatabaseId.substring(0, 8)}...`);
-  } else {
-    console.log('[ ] Meetings DB — not configured');
-  }
+    const seriesExists = await pathExists(path.join(config.obsidianVaultPath, 'meetings', 'series'));
+    console.log(seriesExists
+      ? '[x] Meetings series folder — meetings/series/'
+      : '[ ] Meetings series folder — meetings/series/ not found'
+    );
 
-  if (config && config.daysDatabaseId) {
-    console.log(`[x] Days DB — ${config.daysDatabaseId.substring(0, 8)}...`);
+    const instancesExists = await pathExists(path.join(config.obsidianVaultPath, 'meetings', 'instances'));
+    console.log(instancesExists
+      ? '[x] Meeting instances folder — meetings/instances/'
+      : '[ ] Meeting instances folder — meetings/instances/ not found'
+    );
   } else {
-    console.log('[ ] Days DB — not configured');
+    console.log('[ ] Obsidian vault — not configured (run: prepare-my-day setup)');
   }
 
   console.log();
