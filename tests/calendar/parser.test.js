@@ -323,3 +323,11 @@ test('CalendarEvent includes displayRange field in HH:MM–HH:MM format', () => 
   assert.equal(typeof result[0].displayRange, 'string', 'displayRange should be a string');
   assert.match(result[0].displayRange, /^\d{2}:\d{2}–\d{2}:\d{2}$/, 'displayRange should be HH:MM–HH:MM format');
 });
+
+// 24. isRecurring is false for non-recurring events
+test('isRecurring is false for non-recurring events', () => {
+  const event = mockEvent(); // no rrule field
+  const result = parseEvents(toCalendarData(event));
+  assert.equal(result.length, 1);
+  assert.equal(result[0].isRecurring, false);
+});

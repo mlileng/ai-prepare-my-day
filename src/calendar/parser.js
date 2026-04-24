@@ -18,7 +18,7 @@ import { formatEventTime, formatEventRange } from '../utils/timezone.js';
 
 /**
  * @typedef {{ tz?: string } & Date} DateWithTz
- * @typedef {{ uid: string, title: string, start: Date, end: Date, startTz?: string, endTz?: string, displayStart: string, displayEnd: string, displayRange: string }} CalendarEvent
+ * @typedef {{ uid: string, title: string, isRecurring: boolean, start: Date, end: Date, startTz?: string, endTz?: string, displayStart: string, displayEnd: string, displayRange: string }} CalendarEvent
  */
 
 // ---------------------------------------------------------------------------
@@ -193,6 +193,7 @@ export function parseEvents(calendarData, options = {}) {
       results.push({
         uid:          event.uid,
         title:        getTitle(event.summary),
+        isRecurring:  !!event.rrule,
         start:        eventStart,
         end:          eventEnd,
         startTz:      event.start?.tz,
