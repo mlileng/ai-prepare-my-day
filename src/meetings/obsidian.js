@@ -105,3 +105,44 @@ ${event.title} — ${event.displayRange}
   await fs.writeFile(absPath, content, 'utf8');
   return relPath;
 }
+
+export async function createMeetingSeries(vaultPath, event, date, seriesSlug) {
+  const relPath = `${SERIES_DIR}/${seriesSlug}.md`;
+  const absPath = path.join(vaultPath, relPath);
+
+  // Idempotency guard — never overwrite an existing series file
+  try {
+    await fs.access(absPath);
+    return relPath;
+  } catch {
+    // File does not exist — proceed to create
+  }
+
+  await fs.mkdir(path.join(vaultPath, SERIES_DIR), { recursive: true });
+
+  const content = `---
+type: meeting-series
+name: "${event.title}"
+status: recurring
+priority: ""
+cadence: "Recurring"
+participants: []
+organizations: []
+initiatives: []
+created: ${date}
+last_edited: ${date}
+tags: [meeting-series]
+---
+
+## Purpose
+
+*(to be filled in)*
+
+## Participants
+
+*(to be filled in)*
+`;
+
+  await fs.writeFile(absPath, content, 'utf8');
+  return relPath;
+}

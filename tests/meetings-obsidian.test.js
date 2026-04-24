@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { fetchAllSeries, findExistingInstance, createMeetingInstance } from '../src/meetings/obsidian.js';
+import { fetchAllSeries, findExistingInstance, createMeetingInstance, createMeetingSeries } from '../src/meetings/obsidian.js';
 
 async function makeTempVault() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'wiki-test-'));
@@ -89,5 +89,43 @@ test('createMeetingInstance is idempotent — returns existing path without over
   await createMeetingInstance(vault, event, '2026-04-24', 'heidi-morten', 'heidi-morten');
   const content = await fs.readFile(instancePath, 'utf8');
   assert.equal(content, '# my notes');
+  await fs.rm(vault, { recursive: true });
+});
+
+test('createMeetingSeries creates file with full skeleton frontmatter', async () => {
+  const vault = await makeTempVault();
+  const event = { title: 'B2B Internal Update' };
+  const relPath = await createMeetingSeries(vault, event, '2026-04-24', 'b2b-internal-update');
+  assert.equal(relPath, 'meetings/series/b2b-internal-update.md');
+  const content = await fs.readFile(path.join(vault, relPath), 'utf8');
+  assert.ok(content.includes('type: meeting-series'));
+  assert.ok(content.includes('name: "B2B Internal Update"'));
+  assert.ok(content.includes('status: recurring'));
+  assert.ok(content.includes('cadence: "Recurring"'));
+  assert.ok(content.includes('created: 2026-04-24'));
+  assert.ok(content.includes('tags: [meeting-series]'));
+  assert.ok(content.includes('## Purpose'));
+  assert.ok(content.includes('## Participants'));
+  await fs.rm(vault, { recursive: true });
+});
+
+test('createMeetingSeries is idempotent — returns path without overwriting existing file', async () => {
+  const vault = await makeTempVault();
+  const event = { title: 'B2B Internal Update' };
+  await createMeetingSeries(vault, event, '2026-04-24', 'b2b-internal-update');
+  const seriesPath = path.join(vault, 'meetings', 'series', 'b2b-internal-update.md');
+  await fs.writeFile(seriesPath, '# hand-crafted content');
+  const relPath = await createMeetingSeries(vault, event, '2026-04-24', 'b2b-internal-update');
+  assert.equal(relPath, 'meetings/series/b2b-internal-update.md');
+  const content = await fs.readFile(seriesPath, 'utf8');
+  assert.equal(content, '# hand-crafted content');
+  await fs.rm(vault, { recursive: true });
+});
+
+test('createMeetingSeries returns correct vault-relative path', async () => {
+  const vault = await makeTempVault();
+  const event = { title: 'Weekly Sync' };
+  const relPath = await createMeetingSeries(vault, event, '2026-04-24', 'weekly-sync');
+  assert.equal(relPath, 'meetings/series/weekly-sync.md');
   await fs.rm(vault, { recursive: true });
 });
