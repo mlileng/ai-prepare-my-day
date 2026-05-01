@@ -1,8 +1,8 @@
 {
   "name": "prepare-my-day",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
-  "description": "Sync Microsoft Calendar meetings to Notion with intelligent linking",
+  "description": "Sync Outlook calendar meetings to Obsidian vault",
   "bin": {
     "prepare-my-day": "./src/index.js",
     "mcp": "./src/mcp-server.js"
@@ -12,7 +12,7 @@
   },
   "keywords": [
     "calendar",
-    "notion",
+    "obsidian",
     "automation",
     "cli"
   ],
