@@ -11,6 +11,7 @@ import { fetchCalendar } from './fetcher.js';
 import { parseEvents } from './parser.js';
 import { hasEventsChanged } from './cache.js';
 import { loadConfig } from '../config/manager.js';
+import { loadSuppressedTerms } from './suppression.js';
 
 /**
  * @typedef {{ uid: string, title: string, start: Date, end: Date, startTz?: string, endTz?: string, displayStart: string, displayEnd: string, displayRange: string }} CalendarEvent
@@ -29,20 +30,22 @@ import { loadConfig } from '../config/manager.js';
  * @throws {Error} If the ICS feed is unreachable (propagated from fetchCalendar)
  */
 export async function getTodaysMeetings() {
-  // 1. Load config
-  const config = await loadConfig();
-  const { icsUrl, userEmail, suppressedMeetings } = config;
+  // 1. Load config and suppression list in parallel
+  const [config, suppressedMeetings] = await Promise.all([
+    loadConfig(),
+    loadSuppressedTerms(),
+  ]);
+  const { icsUrl, userEmail } = config;
 
   // 2. Validate ICS URL is configured
   if (!icsUrl) {
     throw new Error('ICS calendar URL not configured. Run: prepare-my-day setup');
   }
 
-  // 3. Fetch ICS feed — throws "Calendar feed unreachable: ..." on any network failure
-  //    Per locked decision: fail immediately, no retries. Do NOT catch here.
+  // 3. Fetch ICS feed — fail-fast, no retries
   const calendarData = await fetchCalendar(icsUrl);
 
-  // 4. Parse today's events via the parser from plan 02-01
+  // 4. Parse today's events
   const events = parseEvents(calendarData, { userEmail, suppressedMeetings });
 
   // 5. Detect changes via content hash cache
