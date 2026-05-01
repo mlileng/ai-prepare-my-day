@@ -20,10 +20,9 @@ import { loadSuppressedTerms } from './suppression.js';
 /**
  * Fetch, parse and cache-check today's calendar meetings.
  *
- * Reads ICS URL and optional userEmail from config. Fetches the ICS feed,
- * parses today's events, and checks whether the event list has changed since
- * the last run. The `changed` flag lets callers skip Notion sync when nothing
- * has changed.
+ * Reads ICS URL and userEmail from config; loads suppression terms from
+ * `~/.prepare-my-day/suppress.txt`. Fetches the ICS feed, parses today's
+ * events, and checks whether the event list has changed since the last run.
  *
  * @returns {Promise<{ events: CalendarEvent[], changed: boolean }>}
  * @throws {Error} If ICS URL is not configured (actionable message with setup command)
