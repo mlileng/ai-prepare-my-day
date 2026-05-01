@@ -13,7 +13,6 @@ export const DEFAULT_CONFIG = {
   obsidianVaultPath: null,
   icsUrl: null,
   userEmail: null,
-  suppressedMeetings: [],
   teamsWebhookUrl: null
 };
 
