@@ -106,6 +106,33 @@ ${event.title} — ${event.displayRange}
   return relPath;
 }
 
+export async function updateSeriesRecentInstances(vaultPath, seriesId, instanceRelPath, date) {
+  if (!seriesId) return;
+
+  const absSeriesPath = path.join(vaultPath, seriesId);
+  let content;
+  try {
+    content = await fs.readFile(absSeriesPath, 'utf8');
+  } catch {
+    return;
+  }
+
+  const instanceWikiPath = instanceRelPath.replace(/\.md$/, '');
+  const newLine = `- [[${instanceWikiPath}]] — ${date}`;
+
+  const sectionHeading = '## Recent Instances';
+  const idx = content.indexOf(sectionHeading);
+
+  if (idx !== -1) {
+    const afterHeading = idx + sectionHeading.length;
+    content = content.slice(0, afterHeading) + '\n\n' + newLine + content.slice(afterHeading);
+  } else {
+    content = content.trimEnd() + `\n\n${sectionHeading}\n\n${newLine}\n`;
+  }
+
+  await fs.writeFile(absSeriesPath, content, 'utf8');
+}
+
 export async function createMeetingSeries(vaultPath, event, date, seriesSlug) {
   const relPath = `${SERIES_DIR}/${seriesSlug}.md`;
   const absPath = path.join(vaultPath, relPath);
@@ -141,6 +168,9 @@ tags: [meeting-series]
 ## Participants
 
 *(to be filled in)*
+
+## Recent Instances
+
 `;
 
   await fs.writeFile(absPath, content, 'utf8');

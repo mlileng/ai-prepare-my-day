@@ -1,5 +1,5 @@
 import { matchEvent } from './matcher.js';
-import { createMeetingInstance, createMeetingSeries } from './obsidian.js';
+import { createMeetingInstance, createMeetingSeries, updateSeriesRecentInstances } from './obsidian.js';
 import { hashSingleEvent } from '../calendar/cache.js';
 
 function toSlug(title) {
@@ -62,6 +62,10 @@ export async function reconcileMeetings(seriesPages, events, { vaultPath, date, 
     }
 
     const filePath = await createMeetingInstance(vaultPath, event, date, seriesSlug, seriesId);
+
+    if (seriesId) {
+      await updateSeriesRecentInstances(vaultPath, seriesId, filePath, date);
+    }
 
     results.push({
       eventTitle: event.title,
