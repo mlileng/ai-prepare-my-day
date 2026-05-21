@@ -11,11 +11,11 @@ const program = new Command();
 program
   .name('prepare-my-day')
   .description('Sync Outlook calendar meetings to Obsidian vault')
-  .version('0.1.0');
+  .version('0.4.0');
 
 program
   .command('setup')
-  .description('Configure calendar feed and Notion authentication')
+  .description('Configure calendar feed and vault path')
   .action(setupCommand);
 
 program

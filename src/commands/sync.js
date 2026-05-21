@@ -41,7 +41,7 @@ async function syncCommandJson() {
   try {
     results = await syncMeetings(events, { changed });
     result.meetings_created = results.filter(r => r.matchType === 'created').length;
-    result.meetings_matched = results.length - result.meetings_created;
+    result.meetings_matched = results.filter(r => r.matchType === 'exact' || r.matchType === 'fuzzy').length;
   } catch (err) {
     result.errors.push(`Meetings: ${err.message}`);
     process.stdout.write(JSON.stringify(result) + '\n');
