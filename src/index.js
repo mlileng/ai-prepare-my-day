@@ -25,7 +25,8 @@ program
 
 program
   .command('sync')
-  .description('Sync today\'s meetings to Notion')
+  .description('Sync today\'s meetings to Obsidian vault')
+  .option('--json', 'Output structured JSON result instead of spinner UI')
   .action(syncCommand);
 
 program
