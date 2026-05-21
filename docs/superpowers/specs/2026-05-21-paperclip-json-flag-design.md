@@ -44,7 +44,7 @@ Paperclip is configured to run `prepare-my-day sync --json` on the desired sched
 - `daily_page_updated` — whether the daily note was written/updated
 - `errors` — array of error strings, one per failed stage; partial success is possible
 
-**On cache hit:** `meetings_found` reflects today's events, but `meetings_created` and `meetings_matched` are `0` — the meeting sync was skipped because the calendar content hasn't changed. This is normal and not an error.
+**On cache hit:** `meetings_found` reflects today's events. `meetings_created` is `0`. `meetings_matched` reflects the count of cached results (events whose hashes haven't changed since last run) — the meeting sync was skipped for those events, which is normal and not an error.
 
 **Exit codes:**
 - `0` — pipeline completed with no errors (including cache-hit skips)

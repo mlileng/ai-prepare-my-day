@@ -10,7 +10,7 @@ const program = new Command();
 
 program
   .name('prepare-my-day')
-  .description('Sync Outlook meetings to Notion')
+  .description('Sync Outlook calendar meetings to Obsidian vault')
   .version('0.1.0');
 
 program
