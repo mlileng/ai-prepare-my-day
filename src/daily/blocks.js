@@ -40,11 +40,12 @@ export function sortMeetingResults(results) {
  *
  * @param {Array<{ start: string, filePath: string, eventTitle: string }>} sortedResults
  *   Sorted array of meeting results from sortMeetingResults
+ * @param {string|null} [timezone] - IANA timezone ID for display. Defaults to system tz.
  * @returns {Array<string>} Array of markdown wikilink strings
  */
-export function buildMeetingLines(sortedResults) {
+export function buildMeetingLines(sortedResults, timezone) {
   return sortedResults.map(result => {
-    const time = formatEventTime(new Date(result.start));
+    const time = formatEventTime(new Date(result.start), timezone);
     const wikiPath = result.filePath.replace(/\.md$/, '');
     return `- ${time} [[${wikiPath}|${result.eventTitle}]]`;
   });

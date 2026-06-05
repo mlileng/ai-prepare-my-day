@@ -17,7 +17,7 @@ export async function syncDailyPage(results) {
   const date = new Date().toISOString().slice(0, 10);
 
   const sorted = sortMeetingResults(results);
-  const meetingLines = buildMeetingLines(sorted);
+  const meetingLines = buildMeetingLines(sorted, config.timezone);
 
   const exists = await findTodayNote(vaultPath, date);
 

@@ -85,6 +85,25 @@ export async function setupCommand() {
       await updateConfig({ teamsWebhookUrl: teamsPrompt.teamsWebhookUrl.trim() });
     }
 
+    // Step 5: Display timezone (optional)
+    const timezonePrompt = await prompts({
+      type: 'text',
+      name: 'timezone',
+      message: 'Display timezone (e.g. America/Chicago — press Enter to use system default):',
+      validate: value => {
+        if (!value.trim()) return true;
+        try {
+          Intl.DateTimeFormat(undefined, { timeZone: value.trim() });
+          return true;
+        } catch {
+          return `Unknown timezone "${value.trim()}". Use an IANA ID like America/Chicago or Europe/London.`;
+        }
+      },
+    });
+    if (timezonePrompt.timezone && timezonePrompt.timezone.trim()) {
+      await updateConfig({ timezone: timezonePrompt.timezone.trim() });
+    }
+
     console.log('\nSetup complete!\n');
   } catch (error) {
     if (error.message === 'User force closed the prompt') {

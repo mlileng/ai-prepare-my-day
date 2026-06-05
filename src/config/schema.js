@@ -13,7 +13,8 @@ export const DEFAULT_CONFIG = {
   obsidianVaultPath: null,
   icsUrl: null,
   userEmail: null,
-  teamsWebhookUrl: null
+  teamsWebhookUrl: null,
+  timezone: null
 };
 
 /**

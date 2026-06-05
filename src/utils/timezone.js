@@ -6,23 +6,22 @@
  */
 
 /**
- * Format a Date object as a zero-padded HH:MM string in the system's local timezone.
+ * Format a Date object as a zero-padded HH:MM string in the given timezone.
  *
- * Always uses the system timezone so that all events display at the time the
- * user will experience them locally, regardless of what timezone the event
- * was originally created in. This keeps display times consistent with the
- * sort order (which is UTC-based) and with the user's daily page view.
+ * Falls back to the system timezone when tz is null or undefined, preserving
+ * the original behaviour for installs that have no timezone configured.
  *
  * @param {Date} date - A Date object (node-ical DateWithTimeZone or plain Date)
+ * @param {string|null} [tz] - IANA timezone ID (e.g. 'America/Chicago'). Defaults to system tz.
  * @returns {string} Time formatted as "HH:MM"
  */
-export function formatEventTime(date) {
-  const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+export function formatEventTime(date, tz) {
+  const timeZone = tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
   const formatter = new Intl.DateTimeFormat('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-    timeZone: systemTimezone,
+    timeZone,
   });
   return formatter.format(date);
 }
@@ -32,8 +31,9 @@ export function formatEventTime(date) {
  *
  * @param {Date & { tz?: string }} start - Start time with optional `.tz`
  * @param {Date & { tz?: string }} end   - End time with optional `.tz`
+ * @param {string|null} [tz] - IANA timezone ID. Defaults to system tz.
  * @returns {string} Range formatted as "HH:MM–HH:MM"
  */
-export function formatEventRange(start, end) {
-  return `${formatEventTime(start)}–${formatEventTime(end)}`;
+export function formatEventRange(start, end, tz) {
+  return `${formatEventTime(start, tz)}–${formatEventTime(end, tz)}`;
 }
