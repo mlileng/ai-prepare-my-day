@@ -34,7 +34,7 @@ export async function getTodaysMeetings() {
     loadConfig(),
     loadSuppressedTerms(),
   ]);
-  const { icsUrl, userEmail } = config;
+  const { icsUrl, userEmail, timezone } = config;
 
   // 2. Validate ICS URL is configured
   if (!icsUrl) {
@@ -45,7 +45,7 @@ export async function getTodaysMeetings() {
   const calendarData = await fetchCalendar(icsUrl);
 
   // 4. Parse today's events
-  const events = parseEvents(calendarData, { userEmail, suppressedMeetings });
+  const events = parseEvents(calendarData, { userEmail, suppressedMeetings, timezone });
 
   // 5. Detect changes via content hash cache
   const changed = await hasEventsChanged(events);

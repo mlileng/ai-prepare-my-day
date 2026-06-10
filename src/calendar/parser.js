@@ -73,7 +73,7 @@ function isRealAttendee(att) {
  * @returns {CalendarEvent[]}
  */
 export function parseEvents(calendarData, options = {}) {
-  const { userEmail, suppressedMeetings = [] } = options;
+  const { userEmail, suppressedMeetings = [], timezone = null } = options;
 
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
@@ -198,9 +198,9 @@ export function parseEvents(calendarData, options = {}) {
         end:          eventEnd,
         startTz:      event.start?.tz,
         endTz:        event.end?.tz,
-        displayStart: formatEventTime(eventStart),
-        displayEnd:   formatEventTime(eventEnd),
-        displayRange: formatEventRange(eventStart, eventEnd),
+        displayStart: formatEventTime(eventStart, timezone),
+        displayEnd:   formatEventTime(eventEnd, timezone),
+        displayRange: formatEventRange(eventStart, eventEnd, timezone),
       });
     }
   }
