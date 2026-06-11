@@ -150,6 +150,7 @@ export async function createMeetingSeries(vaultPath, event, date, seriesSlug) {
 
   const content = `---
 type: meeting-series
+meeting-id: "${seriesSlug}"
 name: "${event.title}"
 status: recurring
 priority: ""
@@ -172,6 +173,14 @@ tags: [meeting-series]
 
 ## Recent Instances
 
+## Queries
+
+\`\`\`dataview
+TABLE type, status, due, file.link AS source
+FROM "meetings/instances"
+WHERE meeting-id = "${seriesSlug}" AND status = "open"
+SORT type ASC, due ASC
+\`\`\`
 `;
 
   await fs.writeFile(absPath, content, 'utf8');
