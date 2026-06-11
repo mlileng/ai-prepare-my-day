@@ -178,7 +178,7 @@ tags: [meeting-series]
 \`\`\`dataview
 TABLE type, status, due, file.link AS source
 FROM "meetings/instances"
-WHERE meeting-id = "${seriesSlug}" AND status = "open"
+WHERE \`meeting-id\` = "${seriesSlug}" AND status = "open"
 SORT type ASC, due ASC
 \`\`\`
 `;
