@@ -1,6 +1,6 @@
 {
   "name": "prepare-my-day",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "type": "module",
   "description": "Sync Outlook calendar meetings to Obsidian vault",
   "bin": {
