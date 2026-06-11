@@ -81,6 +81,7 @@ export async function createMeetingInstance(vaultPath, event, date, seriesSlug, 
   const seriesLink = seriesId ? `"[[${seriesId.replace(/\.md$/, '')}]]"` : '""';
   const content = `---
 type: meeting-instance
+meeting-id: ${seriesSlug}
 date: ${date}
 series: ${seriesLink}
 participants: []
