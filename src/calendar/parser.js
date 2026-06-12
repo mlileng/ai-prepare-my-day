@@ -61,6 +61,58 @@ function isRealAttendee(att) {
   return cutype !== 'ROOM' && cutype !== 'RESOURCE';
 }
 
+/**
+ * Scan raw ICS text for VEVENT blocks that are recurrence exceptions
+ * (i.e. contain a RECURRENCE-ID line). Parse each one using node-ical
+ * (with VTIMEZONE context) and return a map keyed by a composite
+ * uid:recurrence:<isoDate> string so they survive the UID collision
+ * that would otherwise let the series master overwrite them.
+ *
+ * @param {string} rawText - Raw ICS feed text.
+ * @returns {Record<string, any>} Map of composite key → node-ical event object.
+ */
+function extractRecurrenceExceptions(rawText) {
+  // Collect all VTIMEZONE blocks — needed to correctly parse timezone-aware dates
+  const vtimezones = [];
+  const tzRegex = /BEGIN:VTIMEZONE[\s\S]*?END:VTIMEZONE/gi;
+  let tzMatch;
+  while ((tzMatch = tzRegex.exec(rawText)) !== null) {
+    vtimezones.push(tzMatch[0]);
+  }
+  const tzBlock = vtimezones.join('\r\n');
+
+  const exceptions = {};
+  const blocks = rawText.split(/BEGIN:VEVENT/i).slice(1);
+
+  for (const block of blocks) {
+    const vevent = block.split(/END:VEVENT/i)[0];
+    if (!/RECURRENCE-ID/i.test(vevent)) continue;
+
+    const icsWrapper =
+      `BEGIN:VCALENDAR\r\nVERSION:2.0\r\n${tzBlock}\r\nBEGIN:VEVENT${vevent}END:VEVENT\r\nEND:VCALENDAR`;
+
+    let parsed;
+    try {
+      parsed = ical.parseICS(icsWrapper);
+    } catch {
+      continue;
+    }
+
+    const event = Object.values(parsed).find(e => e.type === 'VEVENT');
+    if (!event?.uid || !event.recurrenceid) continue;
+
+    const rid = event.recurrenceid instanceof Date
+      ? event.recurrenceid
+      : new Date(String(event.recurrenceid));
+    if (isNaN(rid.getTime())) continue;
+
+    const key = `${event.uid}:recurrence:${rid.toISOString()}`;
+    exceptions[key] = event;
+  }
+
+  return exceptions;
+}
+
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
@@ -73,7 +125,26 @@ function isRealAttendee(att) {
  * @returns {CalendarEvent[]}
  */
 export function parseEvents(calendarData, options = {}) {
-  const { userEmail, suppressedMeetings = [], timezone = null } = options;
+  const { userEmail, suppressedMeetings = [], timezone = null, rawText = '' } = options;
+
+  // Extract RECURRENCE-ID exceptions from raw text before the UID map loses them
+  const exceptions = rawText ? extractRecurrenceExceptions(rawText) : {};
+  const workingData = { ...calendarData, ...exceptions };
+
+  // Build a map from UID → Set of YYYYMMDD date strings covered by exceptions.
+  // These dates will be suppressed from RRULE expansion so the exception
+  // event is processed instead of the original occurrence.
+  const exceptionDatesByUid = {};
+  for (const exc of Object.values(exceptions)) {
+    if (!exc.uid || !exc.recurrenceid) continue;
+    const rid = exc.recurrenceid instanceof Date
+      ? exc.recurrenceid
+      : new Date(String(exc.recurrenceid));
+    if (isNaN(rid.getTime())) continue;
+    const dateStr = rid.toISOString().slice(0, 10).replace(/-/g, '');
+    if (!exceptionDatesByUid[exc.uid]) exceptionDatesByUid[exc.uid] = new Set();
+    exceptionDatesByUid[exc.uid].add(dateStr);
+  }
 
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
@@ -84,7 +155,7 @@ export function parseEvents(calendarData, options = {}) {
   let feedHasAttendeeData = false;
   let attendeeWarningEmitted = false;
 
-  for (const component of Object.values(calendarData)) {
+  for (const component of Object.values(workingData)) {
     if (component.type !== 'VEVENT') continue;
     if (component.attendee !== undefined) {
       feedHasAttendeeData = true;
@@ -94,7 +165,7 @@ export function parseEvents(calendarData, options = {}) {
 
   const results = [];
 
-  for (const component of Object.values(calendarData)) {
+  for (const component of Object.values(workingData)) {
     // 1. Type guard — skip non-VEVENT components (VTIMEZONE, VCALENDAR, etc.)
     if (component.type !== 'VEVENT') continue;
 
@@ -136,9 +207,12 @@ export function parseEvents(calendarData, options = {}) {
         }
         const expanded = ical.expandRecurringEvent(event, { from: event.start, to: todayEnd });
         // Filter to actual today and exclude full-day instances
-        instances = expanded.filter(
-          inst => !inst.isFullDay && inst.start >= todayStart && inst.start <= todayEnd
-        );
+        const exDates = exceptionDatesByUid[event.uid] ?? new Set();
+        instances = expanded.filter(inst => {
+          if (inst.isFullDay || inst.start < todayStart || inst.start > todayEnd) return false;
+          const instDateStr = inst.start.toISOString().slice(0, 10).replace(/-/g, '');
+          return !exDates.has(instDateStr);
+        });
       } else {
         // Non-recurring: check if the event falls within today
         if (event.start >= todayStart && event.start <= todayEnd) {
