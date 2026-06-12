@@ -42,10 +42,10 @@ export async function getTodaysMeetings() {
   }
 
   // 3. Fetch ICS feed — fail-fast, no retries
-  const calendarData = await fetchCalendar(icsUrl);
+  const { data: calendarData, rawText } = await fetchCalendar(icsUrl);
 
   // 4. Parse today's events
-  const events = parseEvents(calendarData, { userEmail, suppressedMeetings, timezone });
+  const events = parseEvents(calendarData, { userEmail, suppressedMeetings, timezone, rawText });
 
   // 5. Detect changes via content hash cache
   const changed = await hasEventsChanged(events);
