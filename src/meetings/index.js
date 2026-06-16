@@ -1,6 +1,7 @@
+import { Client } from '@notionhq/client';
 import { loadConfig } from '../config/manager.js';
 import { loadCache, saveCache } from '../calendar/cache.js';
-import { fetchAllSeries } from './obsidian.js';
+import { resolveDataSourceId, fetchAllMeetingPages } from './notion.js';
 import { reconcileMeetings } from './reconciler.js';
 
 export async function syncMeetings(events, { changed }) {
@@ -10,16 +11,19 @@ export async function syncMeetings(events, { changed }) {
   }
 
   const config = await loadConfig();
-  if (!config.obsidianVaultPath) {
-    throw new Error('Obsidian vault not configured. Run: prepare-my-day setup');
+  if (!config.notionApiKey || !config.notionMeetingsDatabaseId) {
+    throw new Error('Notion not configured. Run: prepare-my-day setup');
   }
 
-  const seriesPages = await fetchAllSeries(config.obsidianVaultPath);
+  const client = new Client({ auth: config.notionApiKey });
+  const dataSourceId = await resolveDataSourceId(client, config.notionMeetingsDatabaseId);
+  const seriesPages = await fetchAllMeetingPages(client, dataSourceId);
   const cache = await loadCache();
   const date = new Date().toISOString().slice(0, 10);
 
   const { results, updatedMeetingMap } = await reconcileMeetings(seriesPages, events, {
-    vaultPath: config.obsidianVaultPath,
+    client,
+    dataSourceId,
     date,
     cache,
   });
