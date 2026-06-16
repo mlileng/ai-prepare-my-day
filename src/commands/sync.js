@@ -78,7 +78,7 @@ export async function syncCommand(options = {}) {
   }
 
   // Stage 2: Meetings
-  const meetingsSpinner = ora('Syncing meetings to Obsidian vault...').start();
+  const meetingsSpinner = ora('Syncing meetings to Notion...').start();
   let results;
   try {
     results = await syncMeetings(events, { changed });
