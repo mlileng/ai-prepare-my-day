@@ -55,7 +55,7 @@ export async function setupCommand() {
     const apiKeyPrompt = await prompts({
       type: 'text',
       name: 'notionApiKey',
-      message: 'Notion integration API key (starts with secret_):',
+      message: 'Notion integration API key (starts with ntn_):',
       validate: value => value.trim() ? true : 'Notion API key is required',
     });
     if (!apiKeyPrompt.notionApiKey) { console.log('\nSetup cancelled.'); return; }
