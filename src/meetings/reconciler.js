@@ -1,25 +1,19 @@
 import { matchEvent } from './matcher.js';
-import { createMeetingInstance, createMeetingSeries, updateSeriesRecentInstances } from './obsidian.js';
+import { createMeetingPage } from './notion.js';
 import { hashSingleEvent } from '../calendar/cache.js';
-
-function toSlug(title) {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
 
 function printSummary(results) {
   const exact = results.filter(r => r.matchType === 'exact').length;
   const fuzzy = results.filter(r => r.matchType === 'fuzzy').length;
   const created = results.filter(r => r.matchType === 'created').length;
   const cached = results.filter(r => r.matchType === 'cached').length;
-  const seriesCreated = results.filter(r => r.seriesCreated).length;
 
   let summary = `Meetings: ${exact} matched, ${fuzzy} fuzzy matched, ${created} created`;
-  if (seriesCreated > 0) summary += ` (${seriesCreated} series stub${seriesCreated > 1 ? 's' : ''} auto-created)`;
   if (cached > 0) summary += `, ${cached} unchanged (cached)`;
   console.log(summary);
 }
 
-export async function reconcileMeetings(seriesPages, events, { vaultPath, date, cache }) {
+export async function reconcileMeetings(seriesPages, events, { client, dataSourceId, date, cache }) {
   const results = [];
   const updatedMeetingMap = { ...cache.meetingMap };
 
@@ -30,7 +24,7 @@ export async function reconcileMeetings(seriesPages, events, { vaultPath, date, 
       results.push({
         eventTitle: event.title,
         matchType: 'cached',
-        filePath: cache.meetingMap[eventHash],
+        pageId: cache.meetingMap[eventHash],
         score: 0,
         start: event.start.toISOString(),
       });
@@ -39,43 +33,29 @@ export async function reconcileMeetings(seriesPages, events, { vaultPath, date, 
 
     const match = matchEvent(event.title, seriesPages, 0.8);
 
-    let seriesSlug;
-    let seriesId;
+    let pageId;
     let matchType;
     let score;
 
     if (match.type === 'exact' || match.type === 'fuzzy') {
-      seriesSlug = match.page.slug;
-      seriesId = match.page.id;
+      pageId = match.page.id;
       matchType = match.type;
       score = match.score;
     } else {
-      seriesSlug = toSlug(event.title);
+      const page = await createMeetingPage(client, dataSourceId, event.title);
+      pageId = page.id;
       matchType = 'created';
       score = 0;
-      if (event.isRecurring) {
-        const seriesRelPath = await createMeetingSeries(vaultPath, event, date, seriesSlug);
-        seriesId = seriesRelPath;
-      } else {
-        seriesId = null;
-      }
-    }
-
-    const filePath = await createMeetingInstance(vaultPath, event, date, seriesSlug, seriesId);
-
-    if (seriesId) {
-      await updateSeriesRecentInstances(vaultPath, seriesId, filePath, date);
     }
 
     results.push({
       eventTitle: event.title,
       matchType,
-      filePath,
+      pageId,
       score,
       start: event.start.toISOString(),
-      seriesCreated: matchType === 'created' && !!event.isRecurring,
     });
-    updatedMeetingMap[eventHash] = filePath;
+    updatedMeetingMap[eventHash] = pageId;
   }
 
   printSummary(results);
