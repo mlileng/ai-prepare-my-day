@@ -1,6 +1,8 @@
+import { Client } from '@notionhq/client';
 import { loadConfig } from '../config/manager.js';
-import { findTodayNote, createDailyNote, hasMeetingsSection, prependMeetingsSection } from './obsidian.js';
-import { sortMeetingResults, buildMeetingLines } from './blocks.js';
+import { resolveDataSourceId } from '../meetings/notion.js';
+import { findTodayPage, createTodayPage, hasMeetingsSection, prependMeetingsSection } from './notion.js';
+import { sortMeetingResults, buildMeetingBlocks } from './blocks.js';
 
 export async function syncDailyPage(results) {
   if (results.length === 0) {
@@ -9,32 +11,30 @@ export async function syncDailyPage(results) {
   }
 
   const config = await loadConfig();
-  if (!config.obsidianVaultPath) {
-    throw new Error('Obsidian vault not configured. Run: prepare-my-day setup');
+  if (!config.notionApiKey || !config.notionDaysDatabaseId) {
+    throw new Error('Notion not configured. Run: prepare-my-day setup');
   }
 
-  const vaultPath = config.obsidianVaultPath;
-  const date = new Date().toISOString().slice(0, 10);
+  const client = new Client({ auth: config.notionApiKey });
+  const daysDataSourceId = await resolveDataSourceId(client, config.notionDaysDatabaseId);
 
   const sorted = sortMeetingResults(results);
-  const meetingLines = buildMeetingLines(sorted, config.timezone);
+  const meetingBlocks = buildMeetingBlocks(sorted, config.timezone);
 
-  const exists = await findTodayNote(vaultPath, date);
+  const existingPage = await findTodayPage(client, daysDataSourceId);
 
-  if (!exists) {
-    await createDailyNote(vaultPath, date, meetingLines);
+  if (!existingPage) {
+    await createTodayPage(client, daysDataSourceId, meetingBlocks);
     console.log('Daily page created with meetings section');
     return;
   }
 
-  const alreadyDone = await hasMeetingsSection(vaultPath, date);
+  const alreadyDone = await hasMeetingsSection(client, existingPage.id);
   if (alreadyDone) {
     console.log('Daily page already has meetings — skipping');
     return;
   }
 
-  await prependMeetingsSection(vaultPath, date, meetingLines);
+  await prependMeetingsSection(client, existingPage.id, meetingBlocks);
   console.log(`Daily page updated: ${results.length} meeting(s) linked`);
 }
-
-export { findTodayNote, hasMeetingsSection } from './obsidian.js';
