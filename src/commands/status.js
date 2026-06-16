@@ -1,9 +1,16 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import { Client } from '@notionhq/client';
 import { loadConfig } from '../config/manager.js';
 
-async function pathExists(p) {
-  try { await fs.access(p); return true; } catch { return false; }
+async function checkNotionDatabase(client, databaseId, label) {
+  try {
+    const db = await client.databases.retrieve({ database_id: databaseId });
+    if (db.object === 'database') {
+      return `[x] Notion ${label} — connected`;
+    }
+    return `[ ] Notion ${label} — integration lacks full access (run: prepare-my-day setup)`;
+  } catch (err) {
+    return `[ ] Notion ${label} — ${err.message} (run: prepare-my-day setup)`;
+  }
 }
 
 export async function statusCommand() {
@@ -39,28 +46,23 @@ export async function statusCommand() {
     console.log('[ ] Outlook — not configured (run: prepare-my-day setup)');
   }
 
-  // Obsidian vault
-  if (config && config.obsidianVaultPath) {
-    const vaultExists = await pathExists(config.obsidianVaultPath);
-    if (vaultExists) {
-      console.log(`[x] Obsidian vault — ${config.obsidianVaultPath}`);
+  // Notion
+  if (config && config.notionApiKey) {
+    const client = new Client({ auth: config.notionApiKey });
+
+    if (config.notionMeetingsDatabaseId) {
+      console.log(await checkNotionDatabase(client, config.notionMeetingsDatabaseId, 'meetings database'));
     } else {
-      console.log(`[ ] Obsidian vault — path not found: ${config.obsidianVaultPath}`);
+      console.log('[ ] Notion meetings database — not configured (run: prepare-my-day setup)');
     }
 
-    const seriesExists = await pathExists(path.join(config.obsidianVaultPath, 'meetings', 'series'));
-    console.log(seriesExists
-      ? '[x] Meetings series folder — meetings/series/'
-      : '[ ] Meetings series folder — meetings/series/ not found'
-    );
-
-    const instancesExists = await pathExists(path.join(config.obsidianVaultPath, 'meetings', 'instances'));
-    console.log(instancesExists
-      ? '[x] Meeting instances folder — meetings/instances/'
-      : '[ ] Meeting instances folder — meetings/instances/ not found'
-    );
+    if (config.notionDaysDatabaseId) {
+      console.log(await checkNotionDatabase(client, config.notionDaysDatabaseId, 'days database'));
+    } else {
+      console.log('[ ] Notion days database — not configured (run: prepare-my-day setup)');
+    }
   } else {
-    console.log('[ ] Obsidian vault — not configured (run: prepare-my-day setup)');
+    console.log('[ ] Notion — not configured (run: prepare-my-day setup)');
   }
 
   console.log();
