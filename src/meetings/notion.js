@@ -29,13 +29,13 @@ export async function resolveDataSourceId(client, meetingsDatabaseId) {
   // PartialDatabaseObjectResponse doesn't include data_sources
   if (database.object !== 'database') {
     throw new Error(
-      'Cannot access meetings database data sources. Ensure the Notion integration has full access to the database and the database ID in ~/.prepare-my-day/config.json is correct.'
+      'Cannot access database data sources. Ensure the Notion integration has full access to the database and the database ID in ~/.prepare-my-day/config.json is correct.'
     );
   }
 
   if (!database.data_sources?.length > 0) {
     throw new Error(
-      'Cannot access meetings database data sources. Ensure the Notion integration has full access to the database and the database ID in ~/.prepare-my-day/config.json is correct.'
+      'Cannot access database data sources. Ensure the Notion integration has full access to the database and the database ID in ~/.prepare-my-day/config.json is correct.'
     );
   }
 
