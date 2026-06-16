@@ -36,7 +36,7 @@ export function cronSetupCommand() {
   console.log('');
   console.log('Add this line to your crontab (run: crontab -e):');
   console.log('');
-  console.log(`0 7 * * 1-5 ${nodePath} ${scriptPath} sync >> ${logPath} 2>&1`);
+  console.log(`0 7 * * 1-5 PREPARE_MY_DAY_TRIGGER=cron ${nodePath} ${scriptPath} sync >> ${logPath} 2>&1`);
   console.log('');
   console.log('This runs sync at 07:00 on weekdays (Mon-Fri).');
   console.log('To run daily including weekends, change "1-5" to "*".');

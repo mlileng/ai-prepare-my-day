@@ -3,10 +3,19 @@ import { getTodaysMeetings } from '../calendar/index.js';
 import { syncMeetings } from '../meetings/index.js';
 import { syncDailyPage } from '../daily/index.js';
 
+function getRunMeta() {
+  const ts = new Date().toISOString();
+  const trigger = process.env.PREPARE_MY_DAY_TRIGGER || (process.env.TERM ? 'cli' : 'cron');
+  return { ts, trigger };
+}
+
 function printSyncSummary(events, results) {
+  const { ts, trigger } = getRunMeta();
   const dailyPageStatus = results.length > 0 ? 'updated' : 'no meetings to link';
   console.log('');
   console.log('Sync complete:');
+  console.log(`  Ran at         : ${ts}`);
+  console.log(`  Triggered by   : ${trigger}`);
   console.log(`  Events fetched : ${events.length}`);
   console.log(`  Daily page     : ${dailyPageStatus}`);
 }
@@ -16,7 +25,10 @@ async function syncCommandJson() {
   // calls don't pollute stdout and break JSON parsing by Paperclip.
   console.log = (...args) => process.stderr.write(args.join(' ') + '\n');
 
+  const { ts, trigger } = getRunMeta();
   const result = {
+    ran_at: ts,
+    triggered_by: trigger,
     meetings_found: 0,
     meetings_created: 0,
     meetings_matched: 0,
