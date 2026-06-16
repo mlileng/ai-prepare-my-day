@@ -10,12 +10,12 @@ const program = new Command();
 
 program
   .name('prepare-my-day')
-  .description('Sync Outlook calendar meetings to Obsidian vault')
+  .description('Sync Outlook calendar meetings to Notion')
   .version('0.4.0');
 
 program
   .command('setup')
-  .description('Configure calendar feed and vault path')
+  .description('Configure calendar feed and Notion databases')
   .action(setupCommand);
 
 program
@@ -25,7 +25,7 @@ program
 
 program
   .command('sync')
-  .description('Sync today\'s meetings to Obsidian vault')
+  .description('Sync today\'s meetings to Notion')
   .option('--json', 'Output structured JSON result instead of spinner UI')
   .action(syncCommand);
 
