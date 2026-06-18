@@ -62,6 +62,7 @@ export function launchdSetupCommand(options = {}) {
   if (options.install) {
     const plist = generatePlist();
     const uid = os.userInfo().uid;
+    const logPath = path.join(os.homedir(), '.prepare-my-day', 'sync.log');
 
     // Unload existing agent if already loaded (ignore errors — it may not be loaded)
     try {
@@ -71,11 +72,19 @@ export function launchdSetupCommand(options = {}) {
     }
 
     fs.mkdirSync(path.dirname(PLIST_PATH), { recursive: true });
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
     fs.writeFileSync(PLIST_PATH, plist, 'utf8');
-    execSync(`launchctl bootstrap gui/${uid} "${PLIST_PATH}"`);
+
+    try {
+      execSync(`launchctl bootstrap gui/${uid} "${PLIST_PATH}"`);
+    } catch (err) {
+      console.error(`Failed to load LaunchAgent: ${err.message}`);
+      process.exit(1);
+    }
 
     console.log(`Installed: ${PLIST_PATH}`);
     console.log('Sync will run at 07:00 on weekdays, and on login if a run was missed.');
+    console.log('If sync has not run yet today, it will start momentarily.');
     return;
   }
 
