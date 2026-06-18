@@ -4,6 +4,10 @@ import os from 'os';
 import fs from 'fs';
 import { execSync } from 'child_process';
 
+function xmlEscape(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 const PLIST_LABEL = 'com.mlileng.prepare-my-day.sync';
 const PLIST_PATH = path.join(os.homedir(), 'Library', 'LaunchAgents', `${PLIST_LABEL}.plist`);
 
@@ -22,8 +26,8 @@ function generatePlist() {
 
     <key>ProgramArguments</key>
     <array>
-        <string>${nodePath}</string>
-        <string>${scriptPath}</string>
+        <string>${xmlEscape(nodePath)}</string>
+        <string>${xmlEscape(scriptPath)}</string>
         <string>sync</string>
         <string>--once-per-day</string>
     </array>
@@ -44,9 +48,9 @@ function generatePlist() {
     </dict>
 
     <key>StandardOutPath</key>
-    <string>${logPath}</string>
+    <string>${xmlEscape(logPath)}</string>
     <key>StandardErrorPath</key>
-    <string>${logPath}</string>
+    <string>${xmlEscape(logPath)}</string>
 
     <key>RunAtLoad</key>
     <true/>
@@ -66,6 +70,7 @@ export function launchdSetupCommand(options = {}) {
       // Not currently loaded — fine
     }
 
+    fs.mkdirSync(path.dirname(PLIST_PATH), { recursive: true });
     fs.writeFileSync(PLIST_PATH, plist, 'utf8');
     execSync(`launchctl bootstrap gui/${uid} "${PLIST_PATH}"`);
 
