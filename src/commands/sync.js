@@ -22,6 +22,7 @@ function alreadyRanToday() {
 }
 
 function writeSentinel() {
+  fs.mkdirSync(path.dirname(SENTINEL_PATH), { recursive: true });
   fs.writeFileSync(SENTINEL_PATH, todayString(), 'utf8');
 }
 
