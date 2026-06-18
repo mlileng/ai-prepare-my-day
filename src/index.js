@@ -12,7 +12,7 @@ const program = new Command();
 program
   .name('prepare-my-day')
   .description('Sync Outlook calendar meetings to Notion')
-  .version('0.6.0');
+  .version('0.7.0');
 
 program
   .command('setup')
