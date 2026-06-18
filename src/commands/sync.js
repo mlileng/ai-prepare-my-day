@@ -1,7 +1,29 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import ora from 'ora';
 import { getTodaysMeetings } from '../calendar/index.js';
 import { syncMeetings } from '../meetings/index.js';
 import { syncDailyPage } from '../daily/index.js';
+
+const SENTINEL_PATH = path.join(os.homedir(), '.prepare-my-day', 'last-run-date');
+
+function todayString() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function alreadyRanToday() {
+  try {
+    return fs.readFileSync(SENTINEL_PATH, 'utf8').trim() === todayString();
+  } catch {
+    return false;
+  }
+}
+
+function writeSentinel() {
+  fs.writeFileSync(SENTINEL_PATH, todayString(), 'utf8');
+}
 
 function getRunMeta() {
   const ts = new Date().toISOString();
@@ -20,7 +42,7 @@ function printSyncSummary(events, results) {
   console.log(`  Daily page     : ${dailyPageStatus}`);
 }
 
-async function syncCommandJson() {
+async function syncCommandJson(options = {}) {
   // Redirect console.log to stderr so pipeline's internal printSummary
   // calls don't pollute stdout and break JSON parsing by Paperclip.
   console.log = (...args) => process.stderr.write(args.join(' ') + '\n');
@@ -33,8 +55,15 @@ async function syncCommandJson() {
     meetings_created: 0,
     meetings_matched: 0,
     daily_page_updated: false,
+    skipped: false,
     errors: [],
   };
+
+  if (options.oncePerDay && alreadyRanToday()) {
+    result.skipped = true;
+    process.stdout.write(JSON.stringify(result) + '\n');
+    return;
+  }
 
   // Stage 1: Calendar
   let events;
@@ -68,13 +97,19 @@ async function syncCommandJson() {
     result.errors.push(`Daily page: ${err.message}`);
   }
 
+  if (options.oncePerDay && result.errors.length === 0) writeSentinel();
   process.stdout.write(JSON.stringify(result) + '\n');
   if (result.errors.length > 0) process.exit(1);
 }
 
 export async function syncCommand(options = {}) {
   if (options.json) {
-    return syncCommandJson();
+    return syncCommandJson(options);
+  }
+
+  if (options.oncePerDay && alreadyRanToday()) {
+    console.log('Already ran today — skipping');
+    return;
   }
 
   // Stage 1: Calendar
@@ -111,4 +146,5 @@ export async function syncCommand(options = {}) {
   }
 
   printSyncSummary(events, results);
+  if (options.oncePerDay) writeSentinel();
 }
