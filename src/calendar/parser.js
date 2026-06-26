@@ -131,10 +131,17 @@ export function parseEvents(calendarData, options = {}) {
   const exceptions = rawText ? extractRecurrenceExceptions(rawText) : {};
   const workingData = { ...calendarData, ...exceptions };
 
-  // Build a map from UID → Set of YYYYMMDD date strings covered by exceptions.
-  // These dates will be suppressed from RRULE expansion so the exception
-  // event is processed instead of the original occurrence.
+  // Build two per-UID suppression sets from the exceptions:
+  //  - exceptionDatesByUid: YYYYMMDD of each exception's ORIGINAL recurrence
+  //    slot (RECURRENCE-ID). Suppresses same-day overrides from RRULE expansion.
+  //  - exceptionStartsByUid: ISO timestamp of each exception's NEW start
+  //    (DTSTART). node-ical's expandRecurringEvent applies overrides in place,
+  //    so a moved occurrence surfaces at its new date/time in the expansion.
+  //    When an override moves an occurrence to a different date, the original
+  //    date no longer matches, so we must also suppress by the moved start to
+  //    avoid a duplicate against the standalone-extracted exception below.
   const exceptionDatesByUid = {};
+  const exceptionStartsByUid = {};
   for (const exc of Object.values(exceptions)) {
     if (!exc.uid || !exc.recurrenceid) continue;
     const rid = exc.recurrenceid instanceof Date
@@ -144,6 +151,11 @@ export function parseEvents(calendarData, options = {}) {
     const dateStr = rid.toISOString().slice(0, 10).replace(/-/g, '');
     if (!exceptionDatesByUid[exc.uid]) exceptionDatesByUid[exc.uid] = new Set();
     exceptionDatesByUid[exc.uid].add(dateStr);
+
+    if (exc.start instanceof Date && !isNaN(exc.start.getTime())) {
+      if (!exceptionStartsByUid[exc.uid]) exceptionStartsByUid[exc.uid] = new Set();
+      exceptionStartsByUid[exc.uid].add(exc.start.toISOString());
+    }
   }
 
   const now = new Date();
@@ -208,10 +220,15 @@ export function parseEvents(calendarData, options = {}) {
         const expanded = ical.expandRecurringEvent(event, { from: event.start, to: todayEnd });
         // Filter to actual today and exclude full-day instances
         const exDates = exceptionDatesByUid[event.uid] ?? new Set();
+        const exStarts = exceptionStartsByUid[event.uid] ?? new Set();
         instances = expanded.filter(inst => {
           if (inst.isFullDay || inst.start < todayStart || inst.start > todayEnd) return false;
+          // Suppress occurrence if its original slot was overridden (same-day shift)
           const instDateStr = inst.start.toISOString().slice(0, 10).replace(/-/g, '');
-          return !exDates.has(instDateStr);
+          if (exDates.has(instDateStr)) return false;
+          // Suppress occurrence if it is a moved override already added standalone
+          if (exStarts.has(inst.start.toISOString())) return false;
+          return true;
         });
       } else {
         // Non-recurring: check if the event falls within today
