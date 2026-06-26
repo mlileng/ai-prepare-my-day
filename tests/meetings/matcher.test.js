@@ -118,6 +118,23 @@ test('empty-titled Notion pages are excluded from substring matching', () => {
   assert.notEqual(result.type, 'exact');
 });
 
+test('weak substring guard: short generic title does not match a much longer page title', () => {
+  // "Catch up" (8 chars) is contained in the 41-char page title, but the
+  // length ratio (~0.2) is far too low to be a real match. Must NOT be exact.
+  const pages = [mockPage('Morten / Damian Catch up on AI Initiative')];
+  const result = matchEvent('Catch up', pages);
+  assert.notEqual(result.type, 'exact');
+  assert.equal(result.page, null);
+});
+
+test('weak substring guard: one-word shortening still matches (ratio above guard)', () => {
+  // "Standup" (7) within "Team Standup" (12) -> ratio 0.58, above the 0.5 guard.
+  const pages = [mockPage('Team Standup')];
+  const result = matchEvent('Standup', pages);
+  assert.equal(result.type, 'exact');
+  assert.equal(result.page, pages[0]);
+});
+
 // --------------------------------------------------------------------------
 // matchEvent — Stage 2: fuzzy matching
 // --------------------------------------------------------------------------

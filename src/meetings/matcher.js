@@ -105,7 +105,15 @@ export function matchEvent(eventTitle, notionPages, threshold = 0.8) {
   const substringMatches = notionPages.filter(page => {
     const normPage = normalizeTitle(getPageTitle(page));
     if (normPage === '') return false; // skip empty-titled pages
-    return normPage.includes(normEvent) || normEvent.includes(normPage);
+    if (!(normPage.includes(normEvent) || normEvent.includes(normPage))) return false;
+    // Length-ratio guard: a substring match only counts when the shorter title
+    // is a substantial fraction of the longer. This rejects weak fragment
+    // matches such as a generic "Catch up" landing inside a much longer page
+    // title ("Morten / Damian Catch up on AI Initiative"), which would
+    // otherwise be promoted to an exact match despite minimal overlap.
+    const shorter = Math.min(normPage.length, normEvent.length);
+    const longer = Math.max(normPage.length, normEvent.length);
+    return longer > 0 && shorter / longer >= 0.5;
   });
 
   if (substringMatches.length > 0) {
