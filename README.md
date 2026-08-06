@@ -33,6 +33,25 @@ This walks you through:
 
 Configuration is stored at `~/.prepare-my-day/config.json`.
 
+### Suppress meetings (optional)
+
+To exclude certain meetings from syncing, create a suppression list at `~/.prepare-my-day/suppress.txt`:
+
+```bash
+cp suppress.example.txt ~/.prepare-my-day/suppress.txt
+```
+
+Then edit the file to add meeting titles you want to exclude. Matching is case-insensitive substring — any meeting whose title contains one of the listed terms will be skipped during sync.
+
+Example entries:
+```
+Work Block (Meetings are Fine)
+Private Appointment
+MRE Daily Scrum (New)
+```
+
+Lines starting with `#` are comments. Blank lines are ignored.
+
 ## Usage
 
 ### Sync meetings
