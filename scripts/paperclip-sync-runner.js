@@ -1,9 +1,18 @@
 #!/usr/bin/env node
 // Runs the calendar sync and updates the Paperclip issue based on exit code.
-// Expects PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_TASK_ID in env.
+// Expects PAPERCLIP_API_URL and PAPERCLIP_API_KEY in env, plus either
+// PAPERCLIP_TASK_ID or PAPERCLIP_RUN_ID (the process adapter only sets the
+// latter, so the issue is resolved from the run).
+//
+// Exit codes: the sync's own exit code, or REPORT_FAILED_EXIT when the sync
+// succeeded but the outcome could not be recorded in Paperclip. Without the
+// latter a good run is left with no status and escalates to a human.
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { reportingConfigured, reportOutcome } from './lib/paperclip-report.js';
+
+const REPORT_FAILED_EXIT = 3;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const syncScript = join(__dirname, '..', 'src', 'index.js');
@@ -21,46 +30,15 @@ const exitCode = proc.status ?? 1;
 if (stderr) process.stderr.write(stderr);
 if (stdout) process.stdout.write(stdout);
 
-const {
-  PAPERCLIP_API_URL,
-  PAPERCLIP_API_KEY,
-  PAPERCLIP_TASK_ID,
-  PAPERCLIP_RUN_ID,
-} = process.env;
-
-if (PAPERCLIP_API_URL && PAPERCLIP_API_KEY && PAPERCLIP_TASK_ID) {
-  let comment;
-  let status;
-
-  if (exitCode === 0) {
-    const jsonLine = stdout.trim().split('\n').reverse().find(l => l.startsWith('{'));
-    comment = jsonLine ?? 'Sync completed successfully';
-    status = 'done';
-  } else {
-    const errSnippet = (stderr || stdout).trim().slice(0, 400);
-    comment = `Sync failed (exit ${exitCode})${errSnippet ? ': ' + errSnippet : ''}`;
-    status = 'blocked';
-  }
-
-  const body = JSON.stringify({ status, comment });
-  const headers = {
-    'Authorization': `Bearer ${PAPERCLIP_API_KEY}`,
-    'Content-Type': 'application/json',
-    ...(PAPERCLIP_RUN_ID ? { 'X-Paperclip-Run-Id': PAPERCLIP_RUN_ID } : {}),
-  };
-
+let finalExit = exitCode;
+if (reportingConfigured(process.env)) {
   try {
-    const resp = await fetch(`${PAPERCLIP_API_URL}/api/issues/${PAPERCLIP_TASK_ID}`, {
-      method: 'PATCH',
-      headers,
-      body,
-    });
-    if (!resp.ok) {
-      process.stderr.write(`[paperclip-sync-runner] PATCH issue failed: ${resp.status}\n`);
-    }
+    const { issueId, status } = await reportOutcome(process.env, { exitCode, stdout, stderr });
+    process.stderr.write(`[paperclip-sync-runner] issue ${issueId} -> ${status}\n`);
   } catch (err) {
-    process.stderr.write(`[paperclip-sync-runner] PATCH issue error: ${err.message}\n`);
+    process.stderr.write(`[paperclip-sync-runner] could not record outcome: ${err.message}\n`);
+    if (exitCode === 0) finalExit = REPORT_FAILED_EXIT;
   }
 }
 
-process.exit(exitCode);
+process.exit(finalExit);
